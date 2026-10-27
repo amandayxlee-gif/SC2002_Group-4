@@ -1,0 +1,161 @@
+================================================================================
+HANDOVER: SC2002 RESTAURANT RUSH - STAGE 1 DESIGN CHOICES
+Written: 27 Oct 2026
+================================================================================
+
+INPUTS YOU WILL HAVE
+- "the assignment doc": SC2002 Restaurant Rush Group Assignment (.docx).
+- "the class UML (v1 stage1)": the current PlantUML class diagram in text form.
+  It is the working baseline for Stage 1.
+
+This file records the design choices made so far. It points to the assignment
+doc by section instead of repeating it.
+
+
+--------------------------------------------------------------------------------
+1. PROJECT CONTEXT
+--------------------------------------------------------------------------------
+- Java command-line, turn-based restaurant game built in three stages
+  (assignment doc section 4). The work is at STAGE 1 ONLY.
+- Stage 1 contains no Stage 2 or Stage 3 features (no VIP, Critic, Host,
+  ComboMeal, Happy Hour).
+- The class UML is assessed on coverage, relationships and notation, attributes,
+  operations and encapsulation, and match to code (assignment doc section 7).
+  The final version must annotate encapsulation, polymorphism and composition
+  (section 5).
+- The class UML packages are labelled PERSON 1 to PERSON 5, matching the five
+  group members.
+- Submission details and deadline are in assignment doc section 6.
+
+--------------------------------------------------------------------------------
+2. TURN FLOW
+--------------------------------------------------------------------------------
+For now, the decision is that the manager's decisions in a turn are SEQUENTIAL
+and each one is validated and executed before the next one is made.
+
+  1. The turn starts and the scheduled arrival (if any) joins the waiting queue
+     (assignment doc section 3.2, step 1).
+  2. The manager decides what to do next. Examples: direct the Waiter, direct
+     the Chef, or finish deciding.
+  3. If the manager directs a staff member, that staff member's choice is
+     collected and validated.
+       - If the choice is invalid, the reason is shown and the manager chooses
+         again. State is not changed and the staff member's task is not used up
+         (assignment doc section 3.4).
+       - If the choice is valid, it is executed immediately.
+  4. The manager then moves on to the next decision, or ends decision-making.
+  5. When decision-making ends, the automated part of the turn runs: eating,
+     payment, satisfaction loss and abandonment (assignment doc steps 4 and 5).
+  6. After turn 18, the result is evaluated (step 6).
+
+The class UML supports this through: startTurn(), executeWaiterChoice(choice),
+executeChefChoice(orderId), endTurn(), and a private processArrivals().
+
+Serving only works if an order was already READY on an earlier turn. This is
+enforced by Order.readyTurn, so it holds regardless of the order in which staff
+are directed.
+
+Each staff member performs at most one action per turn (assignment doc section
+2.1 and 3.4).
+
+--------------------------------------------------------------------------------
+3. CLASS DESIGN CHOICES
+--------------------------------------------------------------------------------
+3.1 GameController
+- Control class that sequences the turn and exposes the API used by the CLI.
+- For now, the decision is that GameController owns GameState and TurnProcessor
+  by composition.
+- Holds associations to Waiter, Chef, Cashier, Menu and CustomerChoiceGenerator.
+- Step methods (processArrivals, validateWaiterChoice, validateChefChoice) are
+  private.
+
+3.2 TurnProcessor
+- For now, the decision is to keep TurnProcessor as a separate class owned by
+  the GameController.
+- It runs only the automatic steps: eating, payment, waiting loss and
+  abandonment (assignment doc steps 4 and 5). Player-driven steps (seat, order,
+  serve, prepare) stay in the controller.
+- Reason: the controller would otherwise perform all six turn steps, which
+  weakens cohesion, a graded criterion (assignment doc section 7).
+
+
+3.3 Waiter choices
+- Abstract WaiterChoice with subclasses WaitChoice, SeatChoice(customerId,
+  tableId), TakeOrderChoice(tableId) and ServeChoice(orderId).
+- Each choice type carries only the fields it needs, so there is no overloaded
+  generic target id.
+- The Chef's choice is currently a plain int orderId (could be changed).
+- Choice objects also make scripted, reproducible runs straightforward
+  (assignment doc section 4.1 asks for one victory run and one defeat run).
+
+3.4 GameState
+- Holds the turn number, revenue in cents, paid count, served count, unhappy
+  departures, total satisfaction of paid customers, and the lists of waiting
+  customers, customers, orders and tables.
+- Money is stored as integer cents (assignment doc section 2.2).
+- For now, the decision is that the victory check stays in GameState, because
+  GameState holds all the statistics the check needs.
+- Victory targets are in assignment doc section 2.1: at least 4 paid customers,
+  at least 4500 cents revenue, average paid satisfaction at least 60.
+- If no customer has paid, the average is displayed as N/A.
+- The class UML says collection getters should return read-only views or
+  defensive copies. Additionally, there should be input-side validation in the
+  CLI (selecting actions and targets by number) as a guard against misuse. 
+
+3.5 Customer
+- Attributes: customerId, satisfaction (starts at 100, minimum 0), status,
+  servedTurn, readyToPayTurn and order.
+- State changes go through lifecycle methods (assignOrder, onServed,
+  finishEating, onPaid). There is no public status setter.
+- These lifecycle methods are the points where later customer types can
+  customise behaviour.
+- A customer who reaches satisfaction 0 leaves without paying: the unfinished
+  order is cancelled and the table is freed (assignment doc step 5).
+
+3.6 Order
+- Attributes: orderId, item, status, remainingUnits, finalPriceCents, readyTurn.
+- Status changes only through advance, markServed, markPaid and cancel.
+- readyTurn records when the order became READY. Serving requires
+  currentTurn > readyTurn.
+- Payment requires currentTurn > readyToPayTurn, which is stored on Customer.
+
+3.7 Timing implied by the assignment doc
+- A customer served on turn S finishes eating on turn S+1 and pays on turn S+2 at
+  the earliest (assignment doc step 4 and the worked example in section 3.3).
+
+3.8 Staff and tables
+- Waiter, Chef and Cashier are separate classes with no shared base class.
+- Table has a directed association to its occupant. Table knows its customer; the
+  customer should know its table.
+
+3.9 Menu
+- Menu holds MenuItems. MenuItem exposes price and preparation units through
+  getters only.
+- Items (assignment doc section 2.1): Salad 900 cents / 1 unit, Burger 1500
+  cents / 1 unit, Pasta 1800 cents / 2 units.
+
+3.10 Command-line interface
+- RestaurantCLI only collects choices and displays state. Game rules stay in the
+  domain and control classes (assignment doc section 2.2).
+- The CLI depends on GameController. The controller does not depend on the CLI.
+
+Further notes:
+The version of UML class diagram is a guide on the existing layout of the code. 
+It is not a complete, finalised diagram. Modifications can be made to it. Code
+can be implemented, then class diagram edited after to reflect these changes. Thus,
+any discrepancies between the current class diagram and code created must be documented.
+This documentation must be done through a txt file called "deviation_from_v1_s1_uml"
+with v1_s1 being version 1 stage 1, renamed accordingly. For each discrepancy, state
+the rationale behind implementing the revised version. Do not modify the original 
+UML class diagram file unless explicitly instructed. For any major deviations,
+consult the user first before implementing it.
+Any mistakes found in the UML class diagram should be noted in this deviation document as well.
+
+Additionally, the assignment document provided is an authoritative source. Implementation
+of features must be aligned with the assignment document requirements, based on each stage. 
+When in doubt and consulting the user, reference (or state no reference) the assignment doc
+for the best option. 
+================================================================================
+
+
+

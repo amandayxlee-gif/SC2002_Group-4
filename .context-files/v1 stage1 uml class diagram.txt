@@ -1,0 +1,452 @@
+@startuml
+title Restaurant Rush - Stage 1 UML Class Diagram (Version 3)
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+skinparam nodesep 35
+skinparam ranksep 45
+
+top to bottom direction
+
+' ==========================================
+' PERSON 1 - CORE GAME LOGIC
+' ==========================================
+
+package "Core Game Logic" #E3F2FD {
+
+class GameController <<control>> {
+  - gameState : GameState
+  - turnProcessor : TurnProcessor
+  - waiter : Waiter
+  - chef : Chef
+  - cashier : Cashier
+  - menu : Menu
+  - choiceGenerator : CustomerChoiceGenerator
+  + startGame() : void
+  + startTurn() : void
+  + executeWaiterChoice(choice : WaiterChoice) : boolean
+  + executeChefChoice(orderId : int) : boolean
+  + endTurn() : void
+  + checkResult() : GameResult
+  + getGameState() : GameState
+  - processArrivals() : void
+  - validateWaiterChoice(choice : WaiterChoice) : boolean
+  - validateChefChoice(orderId : int) : boolean
+}
+
+class TurnProcessor <<control>> {
+  - gameState : GameState
+  - cashier : Cashier
+  + runEndOfTurn(currentTurn : int) : void
+  - processEating(currentTurn : int) : void
+  - processPayments(currentTurn : int) : void
+  - updateSatisfaction() : void
+  - handleAbandonment() : void
+}
+
+class GameState <<entity>> {
+  - currentTurn : int
+  - revenueCents : int
+  - paidCount : int
+  - servedCount : int
+  - unhappyDepartures : int
+  - paidSatisfactionTotal : int
+  - waitingList : List<Customer>
+  - customers : List<Customer>
+  - orders : List<Order>
+  - tables : List<Table>
+  + getCurrentTurn() : int
+  + getRevenueCents() : int
+  + getPaidCount() : int
+  + getServedCount() : int
+  + getUnhappyDepartures() : int
+  + getAverageSatisfaction() : double
+  + getWaitingList() : List<Customer>
+  + getCustomers() : List<Customer>
+  + getTables() : List<Table>
+  + getOrders() : List<Order>
+  + getAvailableTable() : Table
+  + addCustomer(c : Customer) : void
+  + addOrder(o : Order) : void
+  + recordServedCustomer() : void
+  + recordUnhappyDeparture() : void
+  + recordPayment(c : Customer, amount : int) : void
+  + advanceTurn() : void
+}
+
+enum GameResult {
+  VICTORY
+  DEFEAT
+}
+
+enum WaiterAction {
+  WAIT
+  SEAT
+  TAKE_ORDER
+  SERVE
+}
+
+abstract class WaiterChoice <<value object>> {
+  - action : WaiterAction
+  + getAction() : WaiterAction
+}
+
+class WaitChoice <<value object>> {
+}
+
+class SeatChoice <<value object>> {
+  - customerId : int
+  - tableId : int
+  + getCustomerId() : int
+  + getTableId() : int
+}
+
+class TakeOrderChoice <<value object>> {
+  - tableId : int
+  + getTableId() : int
+}
+
+class ServeChoice <<value object>> {
+  - orderId : int
+  + getOrderId() : int
+}
+
+}
+
+' ==========================================
+' PERSON 2 - CUSTOMER AND ORDER SYSTEM
+' ==========================================
+
+package "Customer and Order System" #E8F5E9 {
+
+class Customer <<entity>> {
+  - customerId : int
+  - satisfaction : int
+  - status : CustomerStatus
+  - servedTurn : int
+  - readyToPayTurn : int
+  - order : Order
+  + getCustomerId() : int
+  + getSatisfaction() : int
+  + getStatus() : CustomerStatus
+  + getOrder() : Order
+  + getReadyToPayTurn() : int
+  + chooseItem(menu : Menu) : MenuItem
+  + assignOrder(o : Order) : void
+  + decreaseSatisfaction() : void
+  + hasAbandoned() : boolean
+  + onServed(currentTurn : int) : void
+  + finishEating(currentTurn : int) : void
+  + onPaid() : void
+}
+
+class Order <<entity>> {
+  - orderId : int
+  - item : MenuItem
+  - status : OrderStatus
+  - remainingUnits : int
+  - finalPriceCents : int
+  - readyTurn : int
+  + getOrderId() : int
+  + getItem() : MenuItem
+  + getStatus() : OrderStatus
+  + getRemainingUnits() : int
+  + getFinalPriceCents() : int
+  + getReadyTurn() : int
+  + advance(currentTurn : int) : void
+  + markServed() : void
+  + markPaid() : void
+  + cancel() : void
+}
+
+class CustomerChoiceGenerator <<service>> {
+  - deterministic : boolean
+  + chooseItem(menu : Menu, c : Customer) : MenuItem
+}
+
+enum CustomerStatus {
+  WAITING
+  SEATED
+  EATING
+  READY_TO_PAY
+  PAID
+  LEFT
+}
+
+enum OrderStatus {
+  PLACED
+  PREPARING
+  READY
+  SERVED
+  PAID
+  CANCELLED
+}
+
+}
+
+' ==========================================
+' PERSON 3 - STAFF AND TABLES
+' ==========================================
+
+package "Staff and Restaurant Operations" #FFF3E0 {
+
+class Waiter <<entity>> {
+  + seat(c : Customer, t : Table) : void
+  + takeOrder(c : Customer, item : MenuItem) : Order
+  + serve(o : Order, c : Customer, currentTurn : int) : void
+}
+
+class Chef <<entity>> {
+  + prepare(o : Order, currentTurn : int) : void
+}
+
+class Cashier <<entity>> {
+  + processPayment(c : Customer, currentTurn : int) : int
+}
+
+class Table <<entity>> {
+  - tableId : int
+  - occupant : Customer
+  + getTableId() : int
+  + getOccupant() : Customer
+  + isAvailable() : boolean
+  + occupy(c : Customer) : void
+  + free() : void
+}
+
+}
+
+' ==========================================
+' PERSON 4 - MENU SYSTEM
+' ==========================================
+
+package "Menu System" #F3E5F5 {
+
+class Menu <<entity>> {
+  - items : List<MenuItem>
+  + getItems() : List<MenuItem>
+  + getItem(name : String) : MenuItem
+}
+
+class MenuItem <<entity>> {
+  - name : String
+  - priceCents : int
+  - preparationUnits : int
+  + getName() : String
+  + getPriceCents() : int
+  + getPreparationUnits() : int
+}
+
+}
+
+' ==========================================
+' PERSON 5 - CLI
+' ==========================================
+
+package "Command-Line Interface" #ECEFF1 {
+
+class RestaurantCLI <<boundary>> {
+  - controller : GameController
+  + displayState() : void
+  + getWaiterChoice() : WaiterChoice
+  + getChefOrderChoice() : int
+  + displayError(message : String) : void
+  + displayResult(result : GameResult) : void
+  + run() : void
+}
+
+class Main {
+  + main(args : String[]) : void
+}
+
+}
+
+' ==========================================
+' INHERITANCE
+' ==========================================
+
+WaiterChoice <|-- WaitChoice
+WaiterChoice <|-- SeatChoice
+WaiterChoice <|-- TakeOrderChoice
+WaiterChoice <|-- ServeChoice
+
+' ==========================================
+' CORE RELATIONSHIPS
+' ==========================================
+
+Main ..> RestaurantCLI
+
+RestaurantCLI --> "1" GameController
+
+GameController *-- "1" GameState
+GameController *-- "1" TurnProcessor
+
+GameController --> "1" Waiter
+GameController --> "1" Chef
+GameController --> "1" Cashier
+GameController --> "1" Menu
+GameController --> "1" CustomerChoiceGenerator
+
+TurnProcessor --> "1" GameState
+TurnProcessor --> "1" Cashier
+
+GameController ..> WaiterChoice
+GameController ..> GameResult
+
+GameState *-- "2" Table
+GameState --> "0..*" Customer
+GameState --> "0..*" Order
+
+' ==========================================
+' CUSTOMER AND ORDER RELATIONSHIPS
+' ==========================================
+
+Customer --> "0..1" Order
+Order --> "1" MenuItem
+Table --> "0..1" Customer
+
+Customer ..> CustomerStatus
+Order ..> OrderStatus
+
+CustomerChoiceGenerator ..> Customer
+CustomerChoiceGenerator ..> Menu
+
+' ==========================================
+' STAFF DEPENDENCIES
+' ==========================================
+
+Waiter ..> Customer
+Waiter ..> Table
+Waiter ..> Order
+Waiter ..> MenuItem
+
+Chef ..> Order
+Cashier ..> Customer
+
+' ==========================================
+' MENU RELATIONSHIPS
+' ==========================================
+
+Menu o-- "1..*" MenuItem
+
+' ==========================================
+' ACTION CHOICE RELATIONSHIPS
+' ==========================================
+
+WaiterChoice ..> WaiterAction
+
+SeatChoice ..> Customer
+SeatChoice ..> Table
+
+TakeOrderChoice ..> Table
+
+ServeChoice ..> Order
+
+RestaurantCLI ..> WaiterChoice
+
+' ==========================================
+' DESIGN NOTES
+' ==========================================
+
+note right of GameController
+  GAME FLOW
+
+  1. Process customer arrivals.
+  2. Collect and validate Waiter choice.
+  3. Execute Waiter action immediately.
+  4. Collect and validate Chef choice.
+  5. Execute Chef action immediately.
+  6. Run automatic end-of-turn updates.
+
+  Invalid choices do not modify state.
+end note
+
+note right of TurnProcessor
+  AUTOMATIC SIMULATION
+
+  Handles:
+  - Eating progression
+  - Payment eligibility
+  - Automatic cashier payment
+  - Satisfaction reduction
+  - Customer abandonment
+
+  Keeps GameController focused
+  on player actions and sequencing.
+end note
+
+note right of GameState
+  GAME RULES
+
+  18 turns total.
+  Arrivals on turns:
+  1, 4, 7, 10, 13, 16.
+
+  Victory checked after turn 18:
+  Paid >= 4
+  Revenue >= 4500 cents
+  Average paid satisfaction >= 60
+
+  If paidCount = 0:
+  Average displays N/A.
+
+  Collection getters should return
+  read-only views or defensive copies.
+end note
+
+note right of Customer
+  CUSTOMER LIFECYCLE
+
+  Initial satisfaction = 100.
+  Waiting loss = 8 per turn.
+  Minimum = 0.
+
+  assignOrder() updates order.
+  onServed() records servedTurn.
+  finishEating() records payment readiness.
+  onPaid() updates customer status.
+
+  Future Stage 2 subclasses can
+  override lifecycle hooks.
+end note
+
+note bottom of Order
+  TURN RESTRICTIONS
+
+  readyTurn records when the
+  order becomes READY.
+
+  Serving requires:
+  currentTurn > readyTurn.
+
+  Payment requires:
+  currentTurn > readyToPayTurn
+  on the Customer.
+end note
+
+note bottom of WaiterChoice
+  ACTION-SPECIFIC TARGETS
+
+  SeatChoice: customerId and tableId
+  TakeOrderChoice: tableId
+  ServeChoice: orderId
+  WaitChoice: no target
+
+  Avoids ambiguous generic targetId.
+end note
+
+note bottom of TurnProcessor
+  STAFF LIMITS
+
+  Waiter: maximum 1 action per turn.
+  Chef: maximum 1 preparation unit per turn.
+  Cashier: maximum 1 payment per turn.
+
+  The exact end-of-turn processing
+  order must follow the assignment.
+end note
+
+@enduml
