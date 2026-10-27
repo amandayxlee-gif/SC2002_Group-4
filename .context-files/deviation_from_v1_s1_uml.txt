@@ -50,6 +50,21 @@ A4. Order GAINS AN IMMUTABLE customerId
       without traversing customers; avoids the sync cost of a bidirectional
       association.
 
+A5. CUSTOMER SEATING AND WAITING QUEUE MANAGEMENT
+    - Added Customer.table, getTable() and seatAt(Table), which
+      are not explicitly shown in the Stage 1 UML.
+      Why: Customer needs to know its assigned table, and seatAt()
+      updates customer status and table occupancy together without
+      exposing a public status setter.
+
+    - Added GameState.removeWaitingCustomer(Customer).
+      Why: GameState owns the waiting queue and exposes it as an
+      unmodifiable list. This method allows controlled removal
+      when a customer is seated.
+
+    - Waiter.seat() delegates to Customer.seatAt(Table).
+      Why: keeps seating logic encapsulated in Customer.
+
 NOTE (not a design choice): HARNESS FILE ADDED
     - harness.Stage1TurnSequenceHarness exists purely as a temporary testing
       feature: it verifies the 18-turn loop, the arrival schedule and the
@@ -61,29 +76,34 @@ B. DEVIATIONS DUE TO INCOMPLETE TODO/STUBS
    (each entry disappears or is replaced when the owning package lands)
 ================================================================================
 
-B1. STUB CLASSES WITH TODO BODIES (Customer, Order, Waiter, Chef, Cashier,
-    CustomerChoiceGenerator, RestaurantCLI, Main)
-    - Current scope covers only the turn controller and sequence. The stubs
-      carry the UML's method signatures (with GAP/TODO comments) so the
-      skeleton compiles and runs, and teammates can fill bodies without
-      signature changes.
+B1. REMAINING STUB CLASSES AND METHODS
+    - Customer seating is partially implemented, and Waiter.seat()
+      is functional.
+    - Other Customer lifecycle methods, Order preparation/serving,
+      Chef, Cashier, CustomerChoiceGenerator, RestaurantCLI and Main
+      still contain TODOs or incomplete functionality.
 
-B2. VALIDATION STUBS ALWAYS RETURN NULL (VALID)
-    - GameController.validateWaiterChoice and validateChefChoice return null
-      (valid) for now. Why: validation rules depend on waiter/kitchen logic
-      outside the current scope; the validate-then-execute-immediately
-      structure and the String reason contract are in place, so only the rule
-      bodies need dropping in later.
+B2. PARTIAL WAITER VALIDATION
+    - GameController.validateWaiterChoice() now validates SeatChoice:
+      the customer must be in the waiting queue and the selected
+      table must exist and be available.
+    - TAKE_ORDER and SERVE validation remain TODO.
+    - Chef validation remains a stub.
 
-B3. WAITER EXECUTION IS A NO-OP
-    - GameController.executeValidWaiterChoice does not dispatch to the Waiter
-      yet. Why: Waiter.seat/takeOrder/serve bodies are Person 3 TODOs.
+B3. PARTIAL WAITER EXECUTION
+    - GameController.executeValidWaiterChoice() now handles SeatChoice
+      by calling Waiter.seat() and removing the customer from the
+      waiting queue.
+    - WAIT, TAKE_ORDER and SERVE execution remain TODO.
+    - The one-Waiter-action-per-turn restriction is not yet enforced.
 
-B4. Menu SEEDED WITH THE THREE BASE ITEMS
-    - Menu is a Person 4 stub but is constructed with Salad 900c/1, Burger
-      1500c/1, Pasta 1800c/2 (assignment doc section 2.1). Why: needed for any
-      runnable pass; treat seeding as placeholder until the menu work package
-      lands.
+B4. MENU IMPLEMENTATION COMPLETE (PERSON 4)
+    - Menu contains the three fixed Stage 1 dishes:
+      Salad (900 cents, 1 unit), Burger (1500 cents, 1 unit),
+      Pasta (1800 cents, 2 units).
+    - MenuItem validates constructor inputs.
+    - MenuTest and MenuOrderTest pass.
+    - No additional menu functionality is required for Stage 1.
 
 B5. AVERAGE SATISFACTION DOES NOT DISTINGUISH "NO PAYMENTS" FROM 0.0
     - GameState.getAverageSatisfaction() returns 0.0 when paidCount = 0; the
