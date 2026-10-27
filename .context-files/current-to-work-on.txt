@@ -1,8 +1,0 @@
-Only work on content mentioned in this txt, unless explicitly instructed otherwise
-
-turn controller, 18-turn sequence, customer arrivals, game state, victor/defeat conditions
-
-note that the following is separate and should not be worked on:
-customer logic, satisfaction, waiter, chef, cashier, serving and payment, menu items etc
-
-
