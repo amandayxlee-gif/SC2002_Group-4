@@ -5,10 +5,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * STUB (Person 4 scope): holds the menu items. Seeded here with the three
- * base items (assignment doc section 2.1) so the game can run; treat the
- * seeding as a placeholder for now.
+ * Stage 1 restaurant menu containing the three base dishes.
+ * Menu items are fixed and exposed through a read-only list.
  */
+
 public class Menu {
 
     private final List<MenuItem> items = new ArrayList<>();
