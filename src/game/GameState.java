@@ -108,6 +108,10 @@ public class GameState {
         waitingList.add(customer);
     }
 
+    public void removeWaitingCustomer(Customer customer) {
+    waitingList.remove(customer);
+}
+
     public void addOrder(Order order) {
         orders.add(order);
     }

@@ -10,9 +10,8 @@ import menu.MenuItem;
  */
 public class Waiter {
 
-    /** TODO: seat a queued customer at a free table (Table.occupy). */
     public void seat(Customer customer, Table table) {
-        // Intentionally empty.
+        customer.seatAt(table);
     }
 
     /** TODO: take a seated customer's order (item chosen by CustomerChoiceGenerator). */

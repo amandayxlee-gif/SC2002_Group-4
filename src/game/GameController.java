@@ -139,9 +139,41 @@ public class GameController {
      *
      * @return null if valid; otherwise the reason the choice fails
      */
+
     private String validateWaiterChoice(WaiterChoice choice) {
-        return null; // TODO: replace with real validation (Waiter/kitchen scope)
+    if (choice == null) {
+        return "No waiter choice provided";
     }
+
+    if (choice instanceof SeatChoice seatChoice) {
+        Customer customer = null;
+
+        for (Customer c : gameState.getWaitingList()) {
+            if (c.getCustomerId() == seatChoice.getCustomerId()) {
+                customer = c;
+                break;
+            }
+        }
+
+        if (customer == null) {
+            return "Customer is not in the waiting queue";
+        }
+
+        for (staff.Table table : gameState.getTables()) {
+            if (table.getTableId() == seatChoice.getTableId()) {
+                if (!table.isAvailable()) {
+                    return "Table is already occupied";
+                }
+                return null;
+            }
+        }
+
+        return "Table does not exist";
+    }
+
+    // TODO: Validate TAKE_ORDER and SERVE.
+    return null;
+}
 
     /**
      * GAP (execution): dispatch on choice.getAction() to the Waiter:
@@ -150,9 +182,34 @@ public class GameController {
      * CustomerChoiceGenerator); SERVE calls waiter.serve(order, customer,
      * currentTurn). STUB for now: no state change (Waiter body is a TODO).
      */
-    private void executeValidWaiterChoice(WaiterChoice choice) {
-        // TODO: real dispatch
+
+private void executeValidWaiterChoice(WaiterChoice choice) {
+    if (choice instanceof SeatChoice seatChoice) {
+        Customer customer = null;
+        staff.Table table = null;
+
+        for (Customer c : gameState.getWaitingList()) {
+            if (c.getCustomerId() == seatChoice.getCustomerId()) {
+                customer = c;
+                break;
+            }
+        }
+
+        for (staff.Table t : gameState.getTables()) {
+            if (t.getTableId() == seatChoice.getTableId()) {
+                table = t;
+                break;
+            }
+        }
+
+        waiter.seat(customer, table);
+
+        // Remove seated customer from waiting queue
+        gameState.removeWaitingCustomer(customer);
     }
+}
+
+    // TODO: Execute WAIT, TAKE_ORDER and SERVE.
 
     /**
      * GAP (validation): Chef rules go here, e.g. the order must exist, be
