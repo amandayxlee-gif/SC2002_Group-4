@@ -8,6 +8,9 @@ public class Customer {
     private int satisfaction;
     private CustomerStatus status;
     private Table table;
+    private Order order;
+    private int servedTurn = -1;
+    private int readyToPayTurn = -1;
 
     public Customer(int customerId) {
         this.customerId = customerId;
@@ -27,8 +30,24 @@ public class Customer {
         return status;
     }
 
+    public void setStatus(CustomerStatus status) {
+        this.status = status;
+    }
+
     public Table getTable() {
         return table;
+    }
+
+    public Order getOrder() {
+        return order;
+    }
+
+    public int getServedTurn() {
+        return servedTurn;
+    }
+
+    public int getReadyToPayTurn() {
+        return readyToPayTurn;
     }
 
     /** Called when the Waiter seats this customer. */
@@ -45,29 +64,35 @@ public class Customer {
         table.occupy(this);
     }
 
-    // Remaining lifecycle methods are Stage 1 TODOs.
-
     public void assignOrder(Order order) {
-        // TODO
+        this.order = order;
     }
 
+    /**
+     * Waiting or seated customers lose 8 satisfaction points per turn (min 0)[cite:
+     * 1, 17].
+     */
     public void decreaseSatisfaction() {
-        // TODO
+        if (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED) {
+            satisfaction = Math.max(0, satisfaction - 8);
+        }
     }
 
     public boolean hasAbandoned() {
-        return false; // TODO
+        return satisfaction == 0 && (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED);
     }
 
     public void onServed(int currentTurn) {
-        // TODO
+        this.servedTurn = currentTurn;
+        this.status = CustomerStatus.EATING;
     }
 
     public void finishEating(int currentTurn) {
-        // TODO
+        this.status = CustomerStatus.READY_TO_PAY;
+        this.readyToPayTurn = currentTurn;
     }
 
     public void onPaid() {
-        // TODO
+        this.status = CustomerStatus.PAID;
     }
 }

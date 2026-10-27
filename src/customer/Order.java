@@ -2,29 +2,23 @@ package customer;
 
 import menu.MenuItem;
 
-/**
- * STUB (Person 2 scope): minimal order, just enough for GameState to hold
- * orders. Status-change rules (advance, serving/readyTurn restriction,
- * payment, cancellation) are NOT implemented here.
- */
 public class Order {
 
     private final int orderId;
     private final int customerId;
     private final MenuItem item;
     private OrderStatus status;
+    private int remainingUnits;
+    private int finalPriceCents;
+    private int readyTurn = -1;
 
-    /**
-     * customerId is recorded at creation as a plain immutable id (no live
-     * back-reference to the Customer object), so the UI can display and sort
-     * orders by customer and ServeChoice(orderId) can resolve ownership
-     * without traversing customers.
-     */
     public Order(int orderId, int customerId, MenuItem item) {
         this.orderId = orderId;
         this.customerId = customerId;
         this.item = item;
         this.status = OrderStatus.PLACED;
+        this.remainingUnits = item.getPreparationUnits();
+        this.finalPriceCents = item.getPriceCents();
     }
 
     public int getOrderId() {
@@ -43,31 +37,48 @@ public class Order {
         return status;
     }
 
+    public int getRemainingUnits() {
+        return remainingUnits;
+    }
+
     public int getFinalPriceCents() {
-        return item.getPriceCents();
+        return finalPriceCents;
     }
 
-    // ------------------------------------------------------------------
-    // GAP: the status transitions below are TODOs (Person 2 scope).
-    // ------------------------------------------------------------------
+    public void setFinalPriceCents(int finalPriceCents) {
+        this.finalPriceCents = finalPriceCents;
+    }
 
-    /** TODO: one preparation unit done; becomes READY when the last is done; records readyTurn. */
+    public int getReadyTurn() {
+        return readyTurn;
+    }
+
+    /**
+     * Advances prep units by 1. Becomes READY when remainingUnits reaches 0[cite:
+     * 1, 16, 17].
+     */
     public void advance(int currentTurn) {
-        // Intentionally empty.
+        if (status == OrderStatus.PLACED) {
+            status = OrderStatus.PREPARING;
+        }
+        if (remainingUnits > 0) {
+            remainingUnits--;
+        }
+        if (remainingUnits == 0 && status != OrderStatus.READY) {
+            status = OrderStatus.READY;
+            readyTurn = currentTurn;
+        }
     }
 
-    /** TODO: READY -> SERVED; only valid when currentTurn > readyTurn. */
     public void markServed() {
-        // Intentionally empty.
+        this.status = OrderStatus.SERVED;
     }
 
-    /** TODO: SERVED -> PAID. */
     public void markPaid() {
-        // Intentionally empty.
+        this.status = OrderStatus.PAID;
     }
 
-    /** TODO: -> CANCELLED (abandonment). */
     public void cancel() {
-        // Intentionally empty.
+        this.status = OrderStatus.CANCELLED;
     }
 }

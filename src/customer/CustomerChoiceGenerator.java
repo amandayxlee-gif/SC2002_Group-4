@@ -2,19 +2,19 @@ package customer;
 
 import menu.Menu;
 import menu.MenuItem;
+import java.util.List;
 
-/**
- * STUB (Person 2 scope): decides what a customer orders. Customers choose
- * their own food — the manager never chooses it (assignment doc section 2.2)
- * — via a documented deterministic rule or seeded randomness.
- */
 public class CustomerChoiceGenerator {
 
     /**
-     * GAP: replace with the documented deterministic/seeded choice rule.
-     * STUB for now: always the first menu item so a run can proceed.
+     * Deterministic selection rule: (customerId - 1) % menuSize[cite: 1, 16].
      */
     public MenuItem chooseItem(Menu menu, Customer customer) {
-        return menu.getItems().get(0); // TODO
+        List<MenuItem> items = menu.getItems();
+        if (items == null || items.isEmpty()) {
+            throw new IllegalStateException("Menu is empty");
+        }
+        int index = Math.abs(customer.getCustomerId() - 1) % items.size();
+        return items.get(index);
     }
 }
