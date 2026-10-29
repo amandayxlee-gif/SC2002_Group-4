@@ -3,9 +3,7 @@ package staff;
 import customer.Customer;
 
 /**
- * STUB (Person 3 scope): a table in the base setting. Kept functional
- * (not a TODO shell) because GameState owns the two tables and the seat /
- * free / availability checks are simple state, needed by the turn flow.
+ * Stores a table's ID and current customer.
  */
 public class Table {
 

@@ -1,135 +1,373 @@
 ================================================================================
 DEVIATIONS FROM v1 STAGE 1 UML CLASS DIAGRAM
-Scope of this pass: turn controller, 18-turn sequence, customer arrivals,
-game state, victory/defeat conditions, customer & order system (Person 2).
-Written: 27 Oct 2026; updated 28 Oct 2026.
+Restaurant Rush - SC2002 Group 4
+Original: 27 Oct 2026
+Updated: 29 Oct 2026
+Status: Stage 1 implementation completed and tested
 ================================================================================
 
-Per design_choices.txt, code may be implemented first and the class diagram
-edited afterwards; every discrepancy between the v1 s1 UML and the code is
-recorded here with its rationale. The original UML file was not modified.
+PURPOSE
 
-This document has two sections:
-  A. INTENTIONAL DEVIATIONS - deliberate design decisions that will remain
-     even once all work packages are complete.
-  B. DEVIATIONS DUE TO INCOMPLETE TODO/STUBS - artefacts of the stub pass;
-     each disappears (or changes) when the owning work package lands.
+This document records differences between the original Stage 1 UML class
+diagram and the implemented Stage 1 Java application.
+
+The original UML is preserved as a design baseline. Changes made during
+implementation are documented here with their rationale.
+
+Reference documents:
+- design_choices.txt
+- v1 stage1 uml class diagram.txt
+- SC2002 Restaurant Rush Group Assignment brief
+
+Stage 1 includes:
+- 18-turn game simulation
+- Customer arrivals, seating and waiting queues
+- Ordering, preparation, serving and eating
+- Automatic cashier payment
+- Satisfaction reduction and customer abandonment
+- Revenue and performance tracking
+- Victory/defeat evaluation
+- Interactive command-line interface
+
+The original UML already contains the separation between GameController
+and TurnProcessor, as well as the typed WaiterChoice subclasses.
+These are implemented design features, NOT deviations.
 
 ================================================================================
-A. INTENTIONAL DEVIATIONS
+A. INTENTIONAL DESIGN DEVIATIONS
 ================================================================================
 
-A1. GameResult CHECK PLACEMENT
-    - UML shows checkResult() : GameResult on GameController. Implemented as
-      GameState.checkResult() (plus GameState.isGameOver()) with
-      GameController.checkResult() delegating. Why: GameState holds every
-      statistic the check needs (design_choices.txt section 3.4). Diagram can
-      add the delegation dependency when it is next revised.
+A1. GAME RESULT CHECK PLACEMENT
 
-A2. DEFEAT CAUSE REPORTING ADDED (GameState.getDefeatCauses)
-    - Not in the UML: GameState gains getDefeatCauses() : List<String> plus
-      private helpers hasEnoughPaidCustomers/hasEnoughRevenue/
-      hasEnoughSatisfaction, shared with checkResult(). Why: an invalid run
-      can miss several victory targets at once, so causes are a list shown
-      after a plain VICTORY/DEFEAT result; GameResult itself stays
-      {VICTORY, DEFEAT} so callers keep simple "if defeat" checks. CLI shows
-      causes after result.
+Original UML:
+- GameController exposes checkResult() : GameResult.
+- GameState stores the statistics needed for victory evaluation.
 
-A3. CHOICE METHODS RETURN String INSTEAD OF boolean
-    - executeWaiterChoice, executeChefChoice, validateWaiterChoice and
-      validateChefChoice now return String: null = executed / valid, otherwise
-      the failure reason. Why: an invalid choice must explain why it failed
-      (assignment doc section 3.4). Returning the reason from the public
-      execute methods (not just the private validators) is what lets the CLI
-      display it via displayError before the manager redecides.
+Implementation:
+- GameState implements checkResult().
+- GameState also provides isGameOver().
+- GameController.checkResult() delegates to GameState.
 
-A4. Order GAINS AN IMMUTABLE customerId
-    - Not in the UML attribute list. Set once in the constructor, no
-      back-reference to the Customer object. Why: lets the UI display and sort
-      orders by customer, and lets ServeChoice(orderId) resolve ownership
-      without traversing customers; avoids the sync cost of a bidirectional
-      association.
+Rationale:
+- GameState owns revenue, paid-customer counts and satisfaction totals.
+- Keeping result evaluation close to the relevant data improves cohesion.
+- GameController remains responsible for coordinating game flow.
+
+A2. ADDITIONAL DEFEAT-CAUSE REPORTING
+
+Original UML:
+- GameResult contains VICTORY and DEFEAT.
+- Detailed defeat-cause reporting is not shown.
+
+Implementation:
+- GameState provides getDefeatCauses() : List<String>.
+- Supporting checks evaluate the individual victory requirements.
+- The CLI can display the reasons for defeat.
+
+Rationale:
+- A game may fail more than one victory requirement.
+- Reporting the unmet requirements gives the player useful feedback.
+- GameResult remains a simple VICTORY/DEFEAT enumeration.
+
+A3. ACTION VALIDATION AND ERROR MESSAGES
+
+Original UML:
+- executeWaiterChoice(choice) : boolean
+- executeChefChoice(orderId) : boolean
+- Validation methods return boolean.
+
+Implementation:
+- The corresponding execution and validation methods return String.
+- null indicates success or a valid choice.
+- A non-null String explains why the action was rejected.
+
+Rationale:
+- Invalid decisions should be explained clearly to the player.
+- The CLI can display the returned error message.
+- Invalid choices do not consume the relevant staff action.
+- The manager can select another valid action.
+
+A4. ORDER STORES CUSTOMER IDENTIFIER
+
+Original UML:
+- Order contains orderId, item, status, remainingUnits,
+  finalPriceCents and readyTurn.
+- No customerId attribute is shown.
+
+Implementation:
+- Order also stores an immutable customerId.
+
+Rationale:
+- Orders can be associated with their customers without storing
+  an additional Customer object reference.
+- The CLI can identify the customer associated with each order.
+- ServeChoice can resolve the order's customer efficiently.
 
 A5. CUSTOMER SEATING AND WAITING QUEUE MANAGEMENT
-    - Added Customer.table, getTable() and seatAt(Table), which
-      are not explicitly shown in the Stage 1 UML.
-      Why: Customer needs to know its assigned table, and seatAt()
-      updates customer status and table occupancy together without
-      exposing a public status setter.
 
-    - Added GameState.removeWaitingCustomer(Customer).
-      Why: GameState owns the waiting queue and exposes it as an
-      unmodifiable list. This method allows controlled removal
-      when a customer is seated.
+Original UML:
+- Customer has a status and an associated order.
+- Table stores its occupant.
+- GameState owns the waiting queue.
 
-    - Waiter.seat() delegates to Customer.seatAt(Table).
-      Why: keeps seating logic encapsulated in Customer.
+Implementation:
+- Customer additionally stores its assigned Table.
+- Customer provides getTable() and seatAt(Table).
+- GameState provides removeWaitingCustomer(Customer).
+- Waiter.seat() delegates seating to the Customer operation.
 
-A6. CustomerChoiceGenerator DETERMINISTIC SELECTION FORMULA (PERSON 2)
-    - UML shows generic choice generation. Implemented using the deterministic
-      formula: index = (customerId - 1) % menuSize.
-      Why: Satisfies assignment doc section 2.2 requiring customer food choice
-      to follow a documented deterministic rule.
+Rationale:
+- Seating must update customer status and table occupancy consistently.
+- Customer state changes are encapsulated rather than exposing
+  a public setStatus() operation.
+- GameState retains control over the waiting queue.
+- Collection getters expose read-only views to callers.
 
-A7. Order MODIFIABLE finalPriceCents ATTRIBUTE & SETTER (PERSON 2)
-    - Order holds finalPriceCents (initialized to item base price) with a getter
-      and setter setFinalPriceCents(int price).
-      Why: Allows dynamic discount applications for upcoming Stage 2 VIP discounts
-      and Stage 3 Happy Hour discounts without mutating the immutable base price
-      on MenuItem.
+A6. DETERMINISTIC CUSTOMER FOOD CHOICE
 
-NOTE (not a design choice): HARNESS FILE ADDED
-    - harness.Stage1TurnSequenceHarness exists purely as a temporary testing
-      feature: it verifies the 18-turn loop, the arrival schedule and the
-      result/defeat-cause check. It is not a design decision and can be
-      removed or replaced by the CLI once Person 5 lands it.
+Original UML:
+- CustomerChoiceGenerator provides chooseItem(menu, customer).
+- The exact deterministic selection rule is unspecified.
+
+Implementation:
+- The menu index is selected using:
+
+  index = (customerId - 1) % menuSize
+
+- Customers select from the fixed menu in a repeating sequence.
+
+Rationale:
+- Customer choices are predictable and reproducible.
+- Automated tests can verify expected orders.
+- The player does not directly select customers' food.
+
+A7. ORDER FINAL PRICE MODIFICATION
+
+Original UML:
+- Order contains finalPriceCents.
+- A setter for this attribute is not shown.
+
+Implementation:
+- finalPriceCents initially equals the selected MenuItem base price.
+- Order provides setFinalPriceCents(int).
+
+Rationale:
+- The order's charged amount can be changed independently of
+  the immutable menu-item base price.
+- This supports future pricing rules without changing MenuItem.
+- Stage 1 uses the normal menu prices.
 
 ================================================================================
-B. DEVIATIONS DUE TO INCOMPLETE TODO/STUBS
-   (each entry disappears or is replaced when the owning package lands)
+B. IMPLEMENTATION DETAILS AND COMPLETED FUNCTIONALITY
 ================================================================================
 
-B1. REMAINING STUB CLASSES AND METHODS
-    - COMPLETE (Person 2): Customer lifecycle methods (decreaseSatisfaction,
-      hasAbandoned, onServed, finishEating, onPaid) and Order preparation/
-      advancement/status management (advance, markServed, markPaid, cancel)
-      are now fully implemented.
-    - COMPLETE (Person 2): CustomerChoiceGenerator deterministic choice logic is
-      fully implemented.
-    - Remaining TODOs: Chef execution, Cashier payment processing, RestaurantCLI,
-      and Main still contain stubs until Person 1, 3, and 5 complete their tasks.
+The following items were previously documented as incomplete or as
+temporary stub-related deviations. They are now implemented for Stage 1.
 
-B2. PARTIAL WAITER VALIDATION
-    - GameController.validateWaiterChoice() now validates SeatChoice:
-      the customer must be in the waiting queue and the selected
-      table must exist and be available.
-    - TAKE_ORDER and SERVE validation remain TODO.
-    - Chef validation remains a stub.
+B1. GAMECONTROLLER AND TURNPROCESSOR
 
-B3. PARTIAL WAITER EXECUTION
-    - GameController.executeValidWaiterChoice() now handles SeatChoice
-      by calling Waiter.seat() and removing the customer from the
-      waiting queue.
-    - WAIT, TAKE_ORDER and SERVE execution remain TODO.
-    - The one-Waiter-action-per-turn restriction is not yet enforced.
+- GameController coordinates the turn sequence and player decisions.
+- TurnProcessor handles automatic end-of-turn updates.
+- Customer arrivals follow turns 1, 4, 7, 10, 13 and 16.
+- The game has exactly 18 turns.
+- Victory is evaluated at the end of turn 18.
 
-B4. MENU IMPLEMENTATION COMPLETE (PERSON 4)
-    - Menu contains the three fixed Stage 1 dishes:
-      Salad (900 cents, 1 unit), Burger (1500 cents, 1 unit),
-      Pasta (1800 cents, 2 units).
-    - MenuItem validates constructor inputs.
-    - MenuTest and MenuOrderTest pass.
-    - No additional menu functionality is required for Stage 1.
+This separation is consistent with the original UML.
 
-B5. AVERAGE SATISFACTION DOES NOT DISTINGUISH "NO PAYMENTS" FROM 0.0
-    - GameState.getAverageSatisfaction() returns 0.0 when paidCount = 0; the
-      model has no N/A representation. The UML note expects the average to be
-      displayed as N/A when nobody has paid; that mapping is deferred to the
-      CLI and may change when it lands (assignment doc section 3.5).
+B2. WAITER ACTIONS
 
-B6. Table IMPLEMENTED IN FULL WHILE SURROUNDING CLASSES ARE STUBS
-    - occupy/free/isAvailable work, unlike the other Person 3 stubs. Why:
-      GameState owns the two tables and the seat/free flow needs them. The
-      implementation is deliberately only as complex as the stub flow
-      requires; Person 3 may reshape it when the staff package lands.
+The Waiter supports:
+- WAIT
+- SEAT
+- TAKE_ORDER
+- SERVE
+
+The implementation validates action-specific targets and relevant
+customer, table and order states.
+
+A maximum of one valid Waiter action may be performed per turn.
+Invalid actions do not consume the action allowance.
+
+The original UML's typed choice classes are retained:
+- WaitChoice
+- SeatChoice
+- TakeOrderChoice
+- ServeChoice
+
+B3. CHEF PREPARATION
+
+- Chef preparation is implemented.
+- The Chef performs at most one preparation unit per turn.
+- Salad requires 1 preparation unit.
+- Burger requires 1 preparation unit.
+- Pasta requires 2 preparation units.
+- Orders can be prepared on the turn they are placed.
+- An order that becomes READY cannot be served until a later turn.
+
+B4. CASHIER PAYMENT
+
+- Cashier payment processing is implemented.
+- Payment is handled automatically during end-of-turn processing.
+- At most one eligible customer pays per turn.
+- Eligible customers are processed in arrival order.
+- Payment cannot occur in the same turn the customer becomes
+  READY_TO_PAY.
+- Successful payment updates revenue and paid-customer statistics.
+- The customer's table is freed after payment.
+
+B5. CUSTOMER LIFECYCLE
+
+Customer lifecycle methods are implemented, including:
+- Satisfaction reduction
+- Abandonment detection
+- Seating
+- Order assignment
+- Serving
+- Eating completion
+- Payment completion
+
+Customers begin with satisfaction 100.
+
+Waiting or seated customers who have not been served lose
+8 satisfaction points per turn, with a minimum of 0.
+
+A customer who reaches 0 satisfaction before being served
+leaves the restaurant. Any unfinished order is cancelled,
+and the occupied table, if any, is freed.
+
+Unhappy departures are recorded in GameState.
+
+B6. MENU AND MENUITEM
+
+The fixed Stage 1 menu is implemented:
+
+- Salad: 900 cents, 1 preparation unit
+- Burger: 1500 cents, 1 preparation unit
+- Pasta: 1800 cents, 2 preparation units
+
+MenuItem validates its constructor inputs.
+
+The menu implementation supports the Stage 1 ordering workflow.
+
+B7. TABLE OPERATIONS
+
+Table operations are implemented:
+- occupy()
+- free()
+- isAvailable()
+- getOccupant()
+- getTableId()
+
+The restaurant has two tables.
+
+Table availability and occupancy are integrated with seating,
+abandonment and payment.
+
+B8. COMMAND-LINE INTERFACE
+
+The playable Stage 1 entry point is:
+
+  game.RestaurantRushCLI
+
+The original UML models a RestaurantCLI boundary class and a
+separate Main entry point.
+
+The implemented application uses RestaurantRushCLI as the
+playable command-line entry point. This is an implementation
+structure difference from the original UML.
+
+The CLI displays:
+- Current turn
+- Revenue
+- Paid and served customer counts
+- Average paid-customer satisfaction
+- Waiting customers
+- Occupied and available tables
+- Customer and order information
+- Available manager decisions
+- Final victory/defeat result
+
+When no customer has paid, the CLI displays average satisfaction
+as N/A rather than showing 0.00.
+
+The numeric GameState average remains a double; the N/A display
+is handled by the CLI.
+
+B9. TEST HARNESS AND AUTOMATED TESTS
+
+The original UML does not model test classes.
+
+Additional testing components include:
+- harness.Stage1TurnSequenceHarness
+- game.ControllerSimulationTest
+- game.Stage1RegressionTest
+- game.Stage1EdgeCaseTest
+
+The legacy harness is retained for development/testing purposes.
+It is not the primary playable application.
+
+The Stage 1 regression and edge-case suites have passed
+21 tests in total.
+
+These tests cover:
+- Initial game state
+- Customer arrival schedule
+- Seating and ordering
+- Waiter and Chef action limits
+- Invalid action handling
+- Preparation and serving restrictions
+- Eating and payment timing
+- Table reuse
+- Customer abandonment
+- Read-only collections
+- 18-turn game completion
+- Victory and defeat outcomes
+
+================================================================================
+C. STAGE 1 COMPLETION AND DOCUMENTATION STATUS
+================================================================================
+
+The earlier deviation document referred to incomplete Chef,
+Cashier, Waiter and CLI implementations.
+
+Those statements are superseded by this update.
+
+Stage 1 implementation:
+- Core game logic: Complete
+- Customer and order system: Complete
+- Staff and table operations: Complete
+- Menu system: Complete
+- Playable command-line interface: Complete
+- Regression and edge-case tests: Passed
+
+The original UML has not been overwritten.
+
+Before final submission, the team should decide whether to:
+1. Retain the original UML with this deviation record, or
+2. Produce a revised UML reflecting the implemented Java classes
+   and methods.
+
+Any final UML submitted should accurately represent the code.
+
+Future Stage 2 and Stage 3 functionality is outside the scope
+of this Stage 1 completion record.
+
+ADDITIONAL STAGE 1 IMPLEMENTATION NOTES
+
+1. Customer.setStatus(CustomerStatus) is public in the current
+   implementation. TurnProcessor uses it when marking abandoned
+   customers as LEFT. This differs from the original intention
+   to restrict status changes to lifecycle methods.
+
+2. Waiter.takeOrder(Customer, Order) returns void. The
+   GameController creates the Order and adds it to GameState.
+   The Waiter validates and assigns the existing Order to
+   the Customer. This keeps order creation and storage in
+   GameController rather than Waiter.
+
+3. The original cli.Main and cli.RestaurantCLI files remain
+   as unimplemented placeholders. The playable Stage 1
+   application is game.RestaurantRushCLI.
+================================================================================
+END OF DOCUMENT
 ================================================================================

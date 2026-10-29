@@ -1,26 +1,84 @@
 package staff;
 
 import customer.Customer;
+import customer.CustomerStatus;
+import customer.Order;
+import customer.OrderStatus;
 import menu.MenuItem;
 
-/**
- * STUB (Person 3 scope): the Waiter performs at most one task per turn,
- * chosen by the manager. Method bodies are TODOs; GameController owns the
- * validate-then-execute-immediately sequencing around these calls.
- */
 public class Waiter {
 
     public void seat(Customer customer, Table table) {
         customer.seatAt(table);
     }
 
-    /** TODO: take a seated customer's order (item chosen by CustomerChoiceGenerator). */
-    public void takeOrder(Customer customer, MenuItem item) {
-        // Intentionally empty.
+    /**
+     * Assigns an order to a seated customer.
+     * The controller is responsible for creating and storing the order.
+     */
+    public void takeOrder(Customer customer, Order order) {
+        if (customer == null || order == null) {
+            throw new IllegalArgumentException(
+                "Customer and order cannot be null"
+            );
+        }
+
+        if (customer.getStatus() != CustomerStatus.SEATED) {
+            throw new IllegalStateException(
+                "Customer must be seated before ordering"
+            );
+        }
+
+        if (customer.getOrder() != null) {
+            throw new IllegalStateException(
+                "Customer already has an order"
+            );
+        }
+
+        if (order.getCustomerId() != customer.getCustomerId()) {
+            throw new IllegalArgumentException(
+                "Order belongs to a different customer"
+            );
+        }
+
+        customer.assignOrder(order);
     }
 
-    /** TODO: serve a READY order; only when currentTurn > order.getReadyTurn(). */
-    public void serve(customer.Order order, Customer customer, int currentTurn) {
-        // Intentionally empty.
+    /**
+     * Serves a READY order on a turn after it became ready.
+     */
+    public void serve(Order order, Customer customer, int currentTurn) {
+        if (order == null || customer == null) {
+            throw new IllegalArgumentException(
+                "Order and customer cannot be null"
+            );
+        }
+
+        if (customer.getOrder() != order) {
+            throw new IllegalStateException(
+                "Order does not belong to this customer"
+            );
+        }
+
+        if (customer.getStatus() != CustomerStatus.SEATED) {
+            throw new IllegalStateException(
+                "Customer is not waiting for food"
+            );
+        }
+
+        if (order.getStatus() != OrderStatus.READY) {
+            throw new IllegalStateException(
+                "Order is not ready"
+            );
+        }
+
+        if (currentTurn <= order.getReadyTurn()) {
+            throw new IllegalStateException(
+                "Order cannot be served on the same turn it became ready"
+            );
+        }
+
+        order.markServed();
+        customer.onServed(currentTurn);
     }
 }

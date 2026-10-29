@@ -1,15 +1,26 @@
 package staff;
 
 import customer.Order;
+import customer.OrderStatus;
 
 /**
- * STUB (Person 3 scope): the Chef advances at most one preparation unit per
- * turn, on the order the manager picks. Body is a TODO.
+ * The Chef prepares one unit of an eligible order when
+ * instructed by the GameController.
  */
 public class Chef {
 
-    /** TODO: advance the order by one unit (Order.advance); READY on the last unit. */
     public void prepare(Order order, int currentTurn) {
-        // Intentionally empty.
+        if (order == null) {
+            throw new IllegalArgumentException("Order cannot be null");
+        }
+
+        if (order.getStatus() != OrderStatus.PLACED
+                && order.getStatus() != OrderStatus.PREPARING) {
+            throw new IllegalStateException(
+                "Only placed or preparing orders can be prepared"
+            );
+        }
+
+        order.advance(currentTurn);
     }
 }

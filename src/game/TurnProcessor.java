@@ -1,18 +1,12 @@
 package game;
 
+import customer.Customer;
+import customer.CustomerStatus;
+import customer.Order;
+import customer.OrderStatus;
 import staff.Cashier;
+import staff.Table;
 
-/**
- * Runs the automatic (non player-driven) part of a turn: eating, payment,
- * satisfaction loss and abandonment (assignment doc section 3.2, steps 4
- * and 5). Player-driven steps (seat, order, serve, prepare) stay in the
- * GameController, which keeps the controller focused on sequencing
- * (design_choices.txt section 3.2).
- *
- * STEP BODIES ARE TODOs: the eating/payment/satisfaction
- * logic belongs to the customer and staff work packages. Only the call
- * order of the steps is fixed here.
- */
 public class TurnProcessor {
 
     private final GameState gameState;
@@ -23,55 +17,77 @@ public class TurnProcessor {
         this.cashier = cashier;
     }
 
-    /**
-     * Runs the end-of-turn steps in the order fixed by the assignment doc:
-     * eating, then payment, then satisfaction loss, then abandonment.
-     * Called by GameController.endTurn() with the current turn number.
-     */
     public void runEndOfTurn(int currentTurn) {
         processEating(currentTurn);
         processPayments(currentTurn);
-        updateSatisfaction(currentTurn);
+        updateSatisfaction();
         handleAbandonment();
     }
 
     /**
-     * TODO (step 4): a customer SERVED on an earlier turn finishes one full
-     * turn of eating and becomes READY_TO_PAY. A customer who became READY_TO_PAY
-     * this turn pays next turn at the earliest. Timing: served on turn S,
-     * finishes eating on turn S+1, pays on turn S+2 at the earliest
-     * (assignment doc section 3.2 step 4 and worked example section 3.3).
-     * Uses Customer.onServed / Customer.finishEating lifecycle hooks.
+     * Customers finish eating one turn after being served.
      */
     private void processEating(int currentTurn) {
-        // Intentionally empty: customer lifecycle logic is out of scope for now.
+        for (Customer customer : gameState.getCustomers()) {
+            if (customer.getStatus() == CustomerStatus.EATING
+                    && currentTurn > customer.getServedTurn()) {
+                customer.finishEating(currentTurn);
+            }
+        }
     }
 
     /**
-     * TODO (step 4): the Cashier automatically handles at most one
-     * READY_TO_PAY customer per turn, oldest first. Payment adds the bill to
-     * revenue, marks customer and order PAID, and frees the table
-     * (via GameState.recordPayment and Cashier.processPayment).
+     * Process at most one payment per turn.
+     * Customers are checked in arrival order.
      */
     private void processPayments(int currentTurn) {
-        // Intentionally empty.
+        for (Customer customer : gameState.getCustomers()) {
+            if (customer.getStatus() == CustomerStatus.READY_TO_PAY
+                    && currentTurn > customer.getReadyToPayTurn()) {
+
+                int amount = cashier.processPayment(customer, currentTurn);
+                gameState.recordPayment(customer, amount);
+
+                return;
+            }
+        }
     }
 
     /**
-     * TODO (step 5): every waiting or seated customer not yet served loses
-     * satisfaction (Regular: 8 points, minimum 0). Served, eating and
-     * ready-to-pay customers lose nothing. Uses Customer.decreaseSatisfaction.
+     * Waiting and seated customers lose satisfaction.
      */
-    private void updateSatisfaction(int currentTurn) {
-        // Intentionally empty: satisfaction logic is out of scope for now.
+    private void updateSatisfaction() {
+        for (Customer customer : gameState.getCustomers()) {
+            customer.decreaseSatisfaction();
+        }
     }
 
     /**
-     * TODO (step 5): a customer whose satisfaction reaches 0 leaves without
-     * paying: cancel any unfinished order (Order.cancel) and free the table
-     * (Table.free), then GameState.recordUnhappyDeparture.
+     * Remove customers who reach zero satisfaction.
      */
     private void handleAbandonment() {
-        // Intentionally empty.
+        for (Customer customer : gameState.getCustomers()) {
+            if (!customer.hasAbandoned()) {
+                continue;
+            }
+
+            Order order = customer.getOrder();
+
+            if (order != null
+                    && order.getStatus() != OrderStatus.PAID
+                    && order.getStatus() != OrderStatus.CANCELLED) {
+                order.cancel();
+            }
+
+            Table table = customer.getTable();
+
+            if (table != null && table.getOccupant() == customer) {
+                table.free();
+            }
+
+            gameState.removeWaitingCustomer(customer);
+            customer.setStatus(CustomerStatus.LEFT);
+            gameState.recordUnhappyDeparture();
+        }
     }
 }

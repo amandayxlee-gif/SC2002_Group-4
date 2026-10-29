@@ -7,7 +7,7 @@ import java.util.List;
 public class CustomerChoiceGenerator {
 
     /**
-     * Deterministic selection rule: (customerId - 1) % menuSize[cite: 1, 16].
+     * Chooses menu items in a fixed order based on customer ID.
      */
     public MenuItem chooseItem(Menu menu, Customer customer) {
         List<MenuItem> items = menu.getItems();

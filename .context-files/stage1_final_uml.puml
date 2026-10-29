@@ -1,0 +1,392 @@
+@startuml
+title Restaurant Rush - Stage 1 Implemented Class Diagram (29 Oct 2026)
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam linetype ortho
+hide empty members
+left to right direction
+
+package "game" #E3F2FD {
+
+class GameController <<control>> {
+  - {static} ARRIVAL_TURNS : int[]
+  - gameState : GameState
+  - turnProcessor : TurnProcessor
+  - waiter : Waiter
+  - chef : Chef
+  - cashier : Cashier
+  - menu : Menu
+  - choiceGenerator : CustomerChoiceGenerator
+  - waiterActedThisTurn : boolean
+  - chefActedThisTurn : boolean
+  - turnActive : boolean
+  + GameController(menu : Menu)
+  + startGame() : void
+  + startTurn() : void
+  + executeWaiterChoice(choice : WaiterChoice) : String
+  + executeChefChoice(orderId : int) : String
+  + endTurn() : void
+  + isGameOver() : boolean
+  + checkResult() : GameResult
+  + getGameState() : GameState
+  - processArrivals() : void
+  - validateWaiterChoice(choice : WaiterChoice) : String
+  - executeValidWaiterChoice(choice : WaiterChoice) : void
+  - validateChefChoice(orderId : int) : String
+}
+
+class TurnProcessor <<control>> {
+  - gameState : GameState
+  - cashier : Cashier
+  + TurnProcessor(gameState : GameState, cashier : Cashier)
+  + runEndOfTurn(currentTurn : int) : void
+  - processEating(currentTurn : int) : void
+  - processPayments(currentTurn : int) : void
+  - updateSatisfaction() : void
+  - handleAbandonment() : void
+}
+
+class GameState <<entity>> {
+  + {static} TOTAL_TURNS : int = 18
+  + {static} VICTORY_MIN_PAID_CUSTOMERS : int = 4
+  + {static} VICTORY_MIN_REVENUE_CENTS : int = 4500
+  + {static} VICTORY_MIN_AVERAGE_SATISFACTION : int = 60
+  - currentTurn : int
+  - revenueCents : int
+  - paidCount : int
+  - servedCount : int
+  - unhappyDepartures : int
+  - paidSatisfactionTotal : int
+  - waitingList : List<Customer>
+  - customers : List<Customer>
+  - orders : List<Order>
+  - tables : List<Table>
+  + GameState()
+  + getCurrentTurn() : int
+  + getRevenueCents() : int
+  + getPaidCount() : int
+  + getServedCount() : int
+  + getUnhappyDepartures() : int
+  + getAverageSatisfaction() : double
+  + getWaitingList() : List<Customer>
+  + getCustomers() : List<Customer>
+  + getTables() : List<Table>
+  + getOrders() : List<Order>
+  + getAvailableTable() : Table
+  + addCustomer(customer : Customer) : void
+  + removeWaitingCustomer(customer : Customer) : void
+  + addOrder(order : Order) : void
+  + recordServedCustomer() : void
+  + recordUnhappyDeparture() : void
+  + recordPayment(customer : Customer, amountCents : int) : void
+  + advanceTurn() : void
+  + isGameOver() : boolean
+  + checkResult() : GameResult
+  + getDefeatCauses() : List<String>
+  - hasEnoughPaidCustomers() : boolean
+  - hasEnoughRevenue() : boolean
+  - hasEnoughSatisfaction() : boolean
+}
+
+enum GameResult {
+  VICTORY
+  DEFEAT
+}
+
+enum WaiterAction {
+  WAIT
+  SEAT
+  TAKE_ORDER
+  SERVE
+}
+
+abstract class WaiterChoice <<value object>> {
+  - action : WaiterAction
+  # WaiterChoice(action : WaiterAction)
+  + getAction() : WaiterAction
+}
+
+class WaitChoice <<value object>> {
+  + WaitChoice()
+}
+
+class SeatChoice <<value object>> {
+  - customerId : int
+  - tableId : int
+  + SeatChoice(customerId : int, tableId : int)
+  + getCustomerId() : int
+  + getTableId() : int
+}
+
+class TakeOrderChoice <<value object>> {
+  - tableId : int
+  + TakeOrderChoice(tableId : int)
+  + getTableId() : int
+}
+
+class ServeChoice <<value object>> {
+  - orderId : int
+  + ServeChoice(orderId : int)
+  + getOrderId() : int
+}
+
+class RestaurantRushCLI <<boundary>> {
+  - scanner : Scanner
+  - controller : GameController
+  + {static} main(args : String[]) : void
+  + play() : void
+  - showRestaurant() : void
+  - showOrders() : void
+  - chooseWaiterAction() : void
+  - chooseChefAction() : void
+  - showStats() : void
+  - readInt(prompt : String) : int
+}
+
+class "RestaurantRushCLI.QuitGameException" as QuitGameException <<exception>>
+
+}
+
+package "customer" #E8F5E9 {
+
+class Customer <<entity>> {
+  - customerId : int
+  - satisfaction : int
+  - status : CustomerStatus
+  - table : Table
+  - order : Order
+  - servedTurn : int
+  - readyToPayTurn : int
+  + Customer(customerId : int)
+  + getCustomerId() : int
+  + getSatisfaction() : int
+  + getStatus() : CustomerStatus
+  + setStatus(status : CustomerStatus) : void
+  + getTable() : Table
+  + getOrder() : Order
+  + getServedTurn() : int
+  + getReadyToPayTurn() : int
+  + seatAt(table : Table) : void
+  + assignOrder(order : Order) : void
+  + decreaseSatisfaction() : void
+  + hasAbandoned() : boolean
+  + onServed(currentTurn : int) : void
+  + finishEating(currentTurn : int) : void
+  + onPaid() : void
+}
+
+class Order <<entity>> {
+  - orderId : int
+  - customerId : int
+  - item : MenuItem
+  - status : OrderStatus
+  - remainingUnits : int
+  - finalPriceCents : int
+  - readyTurn : int
+  + Order(orderId : int, customerId : int, item : MenuItem)
+  + getOrderId() : int
+  + getCustomerId() : int
+  + getItem() : MenuItem
+  + getStatus() : OrderStatus
+  + getRemainingUnits() : int
+  + getFinalPriceCents() : int
+  + setFinalPriceCents(finalPriceCents : int) : void
+  + getReadyTurn() : int
+  + advance(currentTurn : int) : void
+  + markServed() : void
+  + markPaid() : void
+  + cancel() : void
+}
+
+class CustomerChoiceGenerator <<service>> {
+  + chooseItem(menu : Menu, customer : Customer) : MenuItem
+}
+
+enum CustomerStatus {
+  WAITING
+  SEATED
+  EATING
+  READY_TO_PAY
+  PAID
+  LEFT
+}
+
+enum OrderStatus {
+  PLACED
+  PREPARING
+  READY
+  SERVED
+  PAID
+  CANCELLED
+}
+
+}
+
+package "staff" #FFF3E0 {
+
+class Waiter <<entity>> {
+  + seat(customer : Customer, table : Table) : void
+  + takeOrder(customer : Customer, order : Order) : void
+  + serve(order : Order, customer : Customer, currentTurn : int) : void
+}
+
+class Chef <<entity>> {
+  + prepare(order : Order, currentTurn : int) : void
+}
+
+class Cashier <<entity>> {
+  + processPayment(customer : Customer, currentTurn : int) : int
+}
+
+class Table <<entity>> {
+  - tableId : int
+  - occupant : Customer
+  + Table(tableId : int)
+  + getTableId() : int
+  + getOccupant() : Customer
+  + isAvailable() : boolean
+  + occupy(customer : Customer) : void
+  + free() : void
+}
+
+}
+
+package "menu" #F3E5F5 {
+
+class Menu <<entity>> {
+  - items : List<MenuItem>
+  + Menu()
+  + getItems() : List<MenuItem>
+  + getItem(name : String) : MenuItem
+}
+
+class MenuItem <<entity>> {
+  - name : String
+  - priceCents : int
+  - preparationUnits : int
+  + MenuItem(name : String, priceCents : int, preparationUnits : int)
+  + getName() : String
+  + getPriceCents() : int
+  + getPreparationUnits() : int
+}
+
+}
+
+package "cli (legacy stubs)" #ECEFF1 {
+
+class "cli.Main" as LegacyMain <<stub>> {
+  + {static} main(args : String[]) : void
+}
+
+class "cli.RestaurantCLI" as LegacyCLI <<stub>> {
+  - controller : GameController
+  + RestaurantCLI(controller : GameController)
+  + displayState() : void
+  + getWaiterChoice() : WaiterChoice
+  + getChefOrderChoice() : int
+  + displayError(message : String) : void
+  + displayResult(result : GameResult) : void
+  + run() : void
+}
+
+}
+
+package "harness (legacy test utility)" #F5F5F5 {
+
+class Stage1TurnSequenceHarness <<test utility>> {
+  + {static} main(args : String[]) : void
+  - {static} describe(error : String) : String
+}
+
+}
+
+' Inheritance
+WaiterChoice <|-- WaitChoice
+WaiterChoice <|-- SeatChoice
+WaiterChoice <|-- TakeOrderChoice
+WaiterChoice <|-- ServeChoice
+RuntimeException <|-- QuitGameException
+
+' Composition and associations
+RestaurantRushCLI ..> QuitGameException
+RestaurantRushCLI --> GameController
+RestaurantRushCLI ..> WaiterChoice
+
+GameController *-- GameState
+GameController *-- TurnProcessor
+GameController *-- Waiter
+GameController *-- Chef
+GameController *-- Cashier
+GameController --> Menu
+GameController *-- CustomerChoiceGenerator
+GameController ..> WaiterChoice
+GameController ..> GameResult
+
+TurnProcessor --> GameState
+TurnProcessor --> Cashier
+
+GameState *-- "2" Table
+GameState o-- "0..*" Customer
+GameState o-- "0..*" Order
+
+Customer --> "0..1" Table
+Customer --> "0..1" Order
+Customer ..> CustomerStatus
+
+Order --> "1" MenuItem
+Order ..> OrderStatus
+
+Table --> "0..1" Customer
+Menu *-- "3" MenuItem
+
+CustomerChoiceGenerator ..> Menu
+CustomerChoiceGenerator ..> Customer
+
+Waiter ..> Customer
+Waiter ..> Order
+Waiter ..> Table
+Chef ..> Order
+Cashier ..> Customer
+
+WaiterChoice --> WaiterAction
+
+LegacyMain ..> LegacyCLI
+LegacyCLI --> GameController
+LegacyCLI ..> WaiterChoice
+
+Stage1TurnSequenceHarness ..> GameController
+Stage1TurnSequenceHarness ..> WaitChoice
+
+note bottom of RestaurantRushCLI
+  PLAYABLE Stage 1 entry point:
+  java -cp out game.RestaurantRushCLI
+  Waiter decision precedes Chef decision.
+end note
+
+note bottom of LegacyCLI
+  Original Person 5 placeholder.
+  Methods remain unimplemented.
+end note
+
+note bottom of Customer
+  setStatus() is PUBLIC in current code,
+  used by TurnProcessor for abandonment.
+  This differs from the stated design intent.
+end note
+
+note bottom of GameState
+  Exactly 18 turns, two tables.
+  Victory: paid >= 4, revenue >= 4500 cents,
+  average paid satisfaction >= 60.
+  Collection getters return unmodifiable views.
+end note
+
+note bottom of TurnProcessor
+  End-turn order:
+  eating -> payment -> satisfaction -> abandonment.
+  Maximum one payment per turn.
+end note
+
+@enduml

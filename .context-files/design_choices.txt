@@ -1,161 +1,401 @@
 ================================================================================
-HANDOVER: SC2002 RESTAURANT RUSH - STAGE 1 DESIGN CHOICES
-Written: 27 Oct 2026
+SC2002 RESTAURANT RUSH - STAGE 1 DESIGN CHOICES
+Originally written: 27 Oct 2026
+Updated: 29 Oct 2026
+Status: Stage 1 implemented and tested
 ================================================================================
 
-INPUTS YOU WILL HAVE
-- "the assignment doc": SC2002 Restaurant Rush Group Assignment (.docx).
-- "the class UML (v1 stage1)": the current PlantUML class diagram in text form.
-  It is the working baseline for Stage 1.
+PURPOSE
 
-This file records the design choices made so far. It points to the assignment
-doc by section instead of repeating it.
+This document records the architectural and implementation decisions made
+for Stage 1 of Restaurant Rush.
 
+It supplements the original Stage 1 UML class diagram and the assignment
+brief. Implementation differences from the original UML are documented in:
 
---------------------------------------------------------------------------------
+  deviation_from_v1_s1_uml.txt
+
+The original UML remains unchanged as the design baseline.
+
+================================================================================
 1. PROJECT CONTEXT
---------------------------------------------------------------------------------
-- Java command-line, turn-based restaurant game built in three stages
-  (assignment doc section 4). The work is at STAGE 1 ONLY.
-- Stage 1 contains no Stage 2 or Stage 3 features (no VIP, Critic, Host,
-  ComboMeal, Happy Hour).
-- The class UML is assessed on coverage, relationships and notation, attributes,
-  operations and encapsulation, and match to code (assignment doc section 7).
-  The final version must annotate encapsulation, polymorphism and composition
-  (section 5).
-- The class UML packages are labelled PERSON 1 to PERSON 5, matching the five
-  group members.
-- Submission details and deadline are in assignment doc section 6.
+================================================================================
 
---------------------------------------------------------------------------------
+Restaurant Rush is a Java command-line, turn-based restaurant management
+game developed for the SC2002 group assignment.
+
+The assignment is implemented in three stages.
+
+This document covers STAGE 1 ONLY.
+
+Stage 1 contains:
+- An 18-turn restaurant simulation
+- Two tables
+- One Waiter, one Chef and one Cashier
+- Scheduled customer arrivals
+- Seating, ordering, preparation, serving and payment
+- Customer satisfaction and abandonment
+- Victory and defeat evaluation
+
+Stage 2 and Stage 3 features, including VIP customers, Critics, Hosts,
+ComboMeals and Happy Hour, are outside the scope of this implementation.
+
+The original UML divides the project into five work packages:
+- Person 1: Core Game Logic
+- Person 2: Customer and Order System
+- Person 3: Staff and Restaurant Operations
+- Person 4: Menu System
+- Person 5: Command-Line Interface
+
+The final UML must accurately reflect the implemented classes and
+relationships, including appropriate object-oriented design principles.
+
+================================================================================
 2. TURN FLOW
---------------------------------------------------------------------------------
-For now, the decision is that the manager's decisions in a turn are SEQUENTIAL
-and each one is validated and executed before the next one is made.
+================================================================================
 
-  1. The turn starts and the scheduled arrival (if any) joins the waiting queue
-     (assignment doc section 3.2, step 1).
-  2. The manager decides what to do next. Examples: direct the Waiter, direct
-     the Chef, or finish deciding.
-  3. If the manager directs a staff member, that staff member's choice is
-     collected and validated.
-       - If the choice is invalid, the reason is shown and the manager chooses
-         again. State is not changed and the staff member's task is not used up
-         (assignment doc section 3.4).
-       - If the choice is valid, it is executed immediately.
-  4. The manager then moves on to the next decision, or ends decision-making.
-  5. When decision-making ends, the automated part of the turn runs: eating,
-     payment, satisfaction loss and abandonment (assignment doc steps 4 and 5).
-  6. After turn 18, the result is evaluated (step 6).
+The implemented game uses sequential decision processing.
 
-The class UML supports this through: startTurn(), executeWaiterChoice(choice),
-executeChefChoice(orderId), endTurn(), and a private processArrivals().
+Each turn follows this sequence:
 
-Serving only works if an order was already READY on an earlier turn. This is
-enforced by Order.readyTurn, so it holds regardless of the order in which staff
-are directed.
+1. GameController starts the turn.
 
-Each staff member performs at most one action per turn (assignment doc section
-2.1 and 3.4).
+2. A customer arrives if the turn number is:
+   1, 4, 7, 10, 13 or 16.
 
---------------------------------------------------------------------------------
+3. The current restaurant state is displayed.
+
+4. The manager selects a Waiter action:
+   - WAIT
+   - SEAT
+   - TAKE_ORDER
+   - SERVE
+
+5. The Waiter choice is validated and, if valid, executed immediately.
+
+6. The manager selects a Chef preparation action or skips preparation.
+
+7. The Chef choice is validated and, if valid, executed immediately.
+
+8. TurnProcessor performs automatic end-of-turn processing:
+   - Eating progression
+   - Eligible cashier payments
+   - Satisfaction reduction
+   - Customer abandonment
+
+9. After turn 18, the game result is evaluated.
+
+IMPORTANT TIMING RULES
+
+- The Waiter performs at most one valid action per turn.
+- The Chef performs at most one preparation unit per turn.
+- The Cashier processes at most one eligible payment per turn.
+- Invalid choices do not consume the relevant staff action.
+- The Chef may prepare an order created earlier in the same turn.
+- An order cannot be served on the turn it becomes READY.
+- A customer cannot pay on the turn they become READY_TO_PAY.
+- A customer served on turn S finishes eating on turn S+1 and
+  can pay on turn S+2 at the earliest.
+
+The implementation uses immediate validation and execution rather
+than collecting all decisions and applying them as a batch.
+
+================================================================================
 3. CLASS DESIGN CHOICES
---------------------------------------------------------------------------------
+================================================================================
+
 3.1 GameController
-- Control class that sequences the turn and exposes the API used by the CLI.
-- For now, the decision is that GameController owns GameState and TurnProcessor
-  by composition.
-- Holds associations to Waiter, Chef, Cashier, Menu and CustomerChoiceGenerator.
-- Step methods (processArrivals, validateWaiterChoice, validateChefChoice) are
-  private.
+
+GameController coordinates the game.
+
+Responsibilities:
+- Start the game
+- Start turns
+- Process scheduled arrivals
+- Validate and execute Waiter choices
+- Validate and execute Chef choices
+- End turns
+- Delegate victory/defeat evaluation
+- Expose GameState to the CLI
+
+GameController owns GameState and TurnProcessor.
+
+It maintains references to the staff objects, Menu and
+CustomerChoiceGenerator.
+
+Internal step and validation methods remain private.
+
+The public action-execution methods return a String:
+- null means the choice was valid and executed.
+- A non-null String describes why the choice was rejected.
+
+This enables the CLI to display useful error messages.
 
 3.2 TurnProcessor
-- For now, the decision is to keep TurnProcessor as a separate class owned by
-  the GameController.
-- It runs only the automatic steps: eating, payment, waiting loss and
-  abandonment (assignment doc steps 4 and 5). Player-driven steps (seat, order,
-  serve, prepare) stay in the controller.
-- Reason: the controller would otherwise perform all six turn steps, which
-  weakens cohesion, a graded criterion (assignment doc section 7).
 
+TurnProcessor is responsible for automatic end-of-turn processing.
+
+Responsibilities:
+- Progress customer eating
+- Process eligible payments
+- Reduce satisfaction where applicable
+- Handle customer abandonment
+
+The separation prevents GameController from becoming responsible
+for every detail of the simulation.
+
+Player-directed seating, ordering, serving and preparation remain
+outside TurnProcessor.
 
 3.3 Waiter choices
-- Abstract WaiterChoice with subclasses WaitChoice, SeatChoice(customerId,
-  tableId), TakeOrderChoice(tableId) and ServeChoice(orderId).
-- Each choice type carries only the fields it needs, so there is no overloaded
-  generic target id.
-- The Chef's choice is currently a plain int orderId (could be changed).
-- Choice objects also make scripted, reproducible runs straightforward
-  (assignment doc section 4.1 asks for one victory run and one defeat run).
+
+WaiterChoice is an abstract value-object class.
+
+Its subclasses are:
+- WaitChoice
+- SeatChoice(customerId, tableId)
+- TakeOrderChoice(tableId)
+- ServeChoice(orderId)
+
+Each choice carries only the identifiers required by its action.
+
+This avoids using one ambiguous generic targetId.
+
+The Chef selects an order using an integer orderId.
+
+These choices support scripted and reproducible tests.
 
 3.4 GameState
-- Holds the turn number, revenue in cents, paid count, served count, unhappy
-  departures, total satisfaction of paid customers, and the lists of waiting
-  customers, customers, orders and tables.
-- Money is stored as integer cents (assignment doc section 2.2).
-- For now, the decision is that the victory check stays in GameState, because
-  GameState holds all the statistics the check needs.
-- Victory targets are in assignment doc section 2.1: at least 4 paid customers,
-  at least 4500 cents revenue, average paid satisfaction at least 60.
-- If no customer has paid, the average is displayed as N/A.
-- The class UML says collection getters should return read-only views or
-  defensive copies. Additionally, there should be input-side validation in the
-  CLI (selecting actions and targets by number) as a guard against misuse. 
+
+GameState stores the restaurant's shared simulation data.
+
+It tracks:
+- Current turn
+- Revenue in integer cents
+- Paid customer count
+- Served customer count
+- Unhappy departures
+- Total satisfaction of paid customers
+- Waiting customers
+- All customers
+- Orders
+- Tables
+
+Money is represented using integer cents to avoid floating-point
+errors in financial calculations.
+
+GameState evaluates the victory conditions.
+
+Victory requires all of the following after turn 18:
+- At least 4 paid customers
+- At least 4500 cents in revenue
+- Average paid-customer satisfaction of at least 60
+
+GameState also provides detailed defeat causes.
+
+Collection getters return read-only views to protect internal state.
+
+When no customer has paid, the CLI displays average satisfaction
+as N/A.
 
 3.5 Customer
-- Attributes: customerId, satisfaction (starts at 100, minimum 0), status,
-  servedTurn, readyToPayTurn and order.
-- State changes go through lifecycle methods (assignOrder, onServed,
-  finishEating, onPaid). There is no public status setter.
-- These lifecycle methods are the points where later customer types can
-  customise behaviour.
-- A customer who reaches satisfaction 0 leaves without paying: the unfinished
-  order is cancelled and the table is freed (assignment doc step 5).
+
+Customer stores:
+- Customer identifier
+- Satisfaction
+- Customer status
+- Served turn
+- Ready-to-pay turn
+- Associated order
+- Assigned table
+
+Customers begin with satisfaction 100.
+
+Customer state changes generally occur through lifecycle methods.
+The current implementation also has a public setStatus() method,
+which TurnProcessor uses to mark abandoned customers as LEFT.
+
+Relevant operations include:
+- seatAt()
+- assignOrder()
+- decreaseSatisfaction()
+- hasAbandoned()
+- onServed()
+- finishEating()
+- onPaid()
+
+Waiting or seated customers who have not been served lose
+8 satisfaction points per turn, to a minimum of 0.
+
+A customer who reaches 0 satisfaction before being served
+leaves without paying.
+
+Any unfinished order is cancelled and the occupied table,
+if applicable, is freed.
 
 3.6 Order
-- Attributes: orderId, item, status, remainingUnits, finalPriceCents, readyTurn.
-- Status changes only through advance, markServed, markPaid and cancel.
-- readyTurn records when the order became READY. Serving requires
-  currentTurn > readyTurn.
-- Payment requires currentTurn > readyToPayTurn, which is stored on Customer.
 
-3.7 Timing implied by the assignment doc
-- A customer served on turn S finishes eating on turn S+1 and pays on turn S+2 at
-  the earliest (assignment doc step 4 and the worked example in section 3.3).
+Order stores:
+- Order identifier
+- Immutable customer identifier
+- Selected MenuItem
+- Order status
+- Remaining preparation units
+- Final price in cents
+- Turn when the order became READY
+
+Order status changes occur through controlled methods:
+- advance()
+- markServed()
+- markPaid()
+- cancel()
+
+An order may be served only after the turn it became READY.
+
+The final price is initially the MenuItem price.
+
+A separate final-price setter allows future pricing adjustments
+without changing the MenuItem base price.
+
+3.7 CustomerChoiceGenerator
+
+CustomerChoiceGenerator selects food automatically.
+
+The Stage 1 selection is deterministic:
+
+  index = (customerId - 1) % menuSize
+
+This produces reproducible choices for testing.
+
+The manager does not choose food on behalf of customers.
 
 3.8 Staff and tables
-- Waiter, Chef and Cashier are separate classes with no shared base class.
-- Table has a directed association to its occupant. Table knows its customer; the
-  customer should know its table.
+
+Waiter, Chef and Cashier are separate classes without a shared
+staff superclass.
+
+Waiter handles:
+- Seating
+- Taking orders
+- Serving prepared food
+
+Chef handles:
+- Order preparation
+
+Cashier handles:
+- Eligible customer payments
+
+Table stores:
+- Table identifier
+- Current occupant
+
+Table operations include:
+- occupy()
+- free()
+- isAvailable()
+
+Customers also maintain a reference to their assigned table.
+
+The restaurant contains two tables.
 
 3.9 Menu
-- Menu holds MenuItems. MenuItem exposes price and preparation units through
-  getters only.
-- Items (assignment doc section 2.1): Salad 900 cents / 1 unit, Burger 1500
-  cents / 1 unit, Pasta 1800 cents / 2 units.
+
+Menu contains the fixed Stage 1 dishes:
+
+- Salad: 900 cents, 1 preparation unit
+- Burger: 1500 cents, 1 preparation unit
+- Pasta: 1800 cents, 2 preparation units
+
+MenuItem stores:
+- Name
+- Base price in cents
+- Required preparation units
+
+MenuItem validates its constructor inputs.
+
+MenuItem data is exposed through getters rather than public
+mutable fields.
 
 3.10 Command-line interface
-- RestaurantCLI only collects choices and displays state. Game rules stay in the
-  domain and control classes (assignment doc section 2.2).
-- The CLI depends on GameController. The controller does not depend on the CLI.
 
-Further notes:
-The version of UML class diagram is a guide on the existing layout of the code. 
-It is not a complete, finalised diagram. Modifications can be made to it. Code
-can be implemented, then class diagram edited after to reflect these changes. Thus,
-any discrepancies between the current class diagram and code created must be documented.
-This documentation must be done through a txt file called "deviation_from_v1_s1_uml"
-with v1_s1 being version 1 stage 1, renamed accordingly. For each discrepancy, state
-the rationale behind implementing the revised version. Do not modify the original 
-UML class diagram file unless explicitly instructed. For any major deviations,
-consult the user first before implementing it.
-Any mistakes found in the UML class diagram should be noted in this deviation document as well.
+The playable Stage 1 entry point is:
 
-Additionally, the assignment document provided is an authoritative source. Implementation
-of features must be aligned with the assignment document requirements, based on each stage. 
-When in doubt and consulting the user, reference (or state no reference) the assignment doc
-for the best option. 
+  game.RestaurantRushCLI
+
+The CLI is responsible for:
+- Displaying the restaurant state
+- Collecting manager decisions
+- Showing validation errors
+- Displaying turn summaries
+- Displaying final results
+
+Game rules remain in the controller and domain classes.
+
+The CLI depends on GameController.
+
+GameController does not depend on the CLI.
+
+The original UML names RestaurantCLI and Main separately.
+The implemented entry-point structure is recorded as a deviation
+in deviation_from_v1_s1_uml.txt.
+
+================================================================================
+4. TESTING AND VERIFICATION
 ================================================================================
 
+Stage 1 includes automated regression and edge-case tests.
 
+Relevant test classes include:
+- ControllerSimulationTest
+- Stage1RegressionTest
+- Stage1EdgeCaseTest
 
+The legacy Stage1TurnSequenceHarness is also retained.
+
+The regression and edge-case suites have passed 21 tests in total.
+
+Verified scenarios include:
+- Scheduled arrivals
+- Seating and ordering
+- Staff action limits
+- Invalid choice handling
+- Order preparation
+- Serving restrictions
+- Eating and payment timing
+- Table reuse
+- Customer abandonment
+- Read-only collection exposure
+- Exactly 18 turns
+- Victory and defeat outcomes
+
+The playable CLI has also been compiled and launched successfully.
+
+================================================================================
+5. UML AND IMPLEMENTATION CONSISTENCY
+================================================================================
+
+The original UML is a design baseline, not a finalised diagram.
+
+Code may be implemented first and the class diagram revised
+afterwards to reflect the final implementation.
+
+Every intentional discrepancy between the original UML and
+the implemented Stage 1 code should be documented in:
+
+  deviation_from_v1_s1_uml.txt
+
+For each discrepancy, record the reason for the change.
+
+Do not overwrite the original UML unless explicitly instructed.
+
+Consult the team before introducing major architectural changes.
+
+The assignment brief remains the authoritative source for
+required behaviour.
+
+Stage 2 and Stage 3 should extend the completed Stage 1
+implementation without silently changing its documented rules.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
