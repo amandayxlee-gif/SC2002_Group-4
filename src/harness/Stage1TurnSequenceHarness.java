@@ -6,16 +6,8 @@ import game.WaitChoice;
 import menu.Menu;
 
 /**
- * basically just to test code runs properly. update as needed. 
- * 
- * TEST HARNESS (temporary, not part of the game): verifies the Stage 1
- * turn-sequence skeleton — the 18-turn loop, arrivals on turns
- * 1/4/7/10/13/16, end-of-turn processing and the victory/defeat check.
- * Not the CLI (Person 5 scope); delete or replace once the CLI exists.
- *
- * NOTE: with the Waiter/Chef/kitchen logic still TODO, no customer can be
- * seated, served or paid, so this scripted run ends in DEFEAT. A reproducible
- * victory run becomes possible once those gaps are filled.
+ * Runs a simple 18-turn test without taking any restaurant actions.
+ * The game ends in defeat because no customers are served or paid.
  */
 public class Stage1TurnSequenceHarness {
 
@@ -26,12 +18,7 @@ public class Stage1TurnSequenceHarness {
         for (int turn = 1; turn <= 18; turn++) {
             controller.startTurn();
 
-            // Manager decision point, repeated per design_choices section 2:
-            // one choice at a time, validated and executed immediately.
-            // executeWaiterChoice returns null when executed, or the failure
-            // reason (which the real CLI would show via displayError before
-            // letting the manager redecide). WaitChoice is used here because
-            // seat/order/serve execution is still a TODO.
+            // Skip the Waiter action and attempt an invalid Chef order.
             String waiterError = controller.executeWaiterChoice(new WaitChoice());
             String chefError = controller.executeChefChoice(-1); // no order exists yet to pick
 

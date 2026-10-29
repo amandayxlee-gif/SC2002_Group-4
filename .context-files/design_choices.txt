@@ -211,8 +211,9 @@ Customer stores:
 
 Customers begin with satisfaction 100.
 
-Customer state changes occur through lifecycle operations rather
-than a public status setter.
+Customer state changes generally occur through lifecycle methods.
+The current implementation also has a public setStatus() method,
+which TurnProcessor uses to mark abandoned customers as LEFT.
 
 Relevant operations include:
 - seatAt()

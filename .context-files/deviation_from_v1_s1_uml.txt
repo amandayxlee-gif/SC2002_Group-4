@@ -352,6 +352,22 @@ Any final UML submitted should accurately represent the code.
 Future Stage 2 and Stage 3 functionality is outside the scope
 of this Stage 1 completion record.
 
+ADDITIONAL STAGE 1 IMPLEMENTATION NOTES
+
+1. Customer.setStatus(CustomerStatus) is public in the current
+   implementation. TurnProcessor uses it when marking abandoned
+   customers as LEFT. This differs from the original intention
+   to restrict status changes to lifecycle methods.
+
+2. Waiter.takeOrder(Customer, Order) returns void. The
+   GameController creates the Order and adds it to GameState.
+   The Waiter validates and assigns the existing Order to
+   the Customer. This keeps order creation and storage in
+   GameController rather than Waiter.
+
+3. The original cli.Main and cli.RestaurantCLI files remain
+   as unimplemented placeholders. The playable Stage 1
+   application is game.RestaurantRushCLI.
 ================================================================================
 END OF DOCUMENT
 ================================================================================

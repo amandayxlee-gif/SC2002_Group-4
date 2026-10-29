@@ -69,8 +69,8 @@ public class Customer {
     }
 
     /**
-     * Waiting or seated customers lose 8 satisfaction points per turn (min 0)[cite:
-     * 1, 17].
+     * Waiting or seated customers lose 8 satisfaction points per turn (minimum 0).
+
      */
     public void decreaseSatisfaction() {
         if (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED) {

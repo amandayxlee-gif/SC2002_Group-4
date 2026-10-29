@@ -54,8 +54,8 @@ public class Order {
     }
 
     /**
-     * Advances prep units by 1. Becomes READY when remainingUnits reaches 0[cite:
-     * 1, 16, 17].
+     * Prepares one unit. The order becomes READY when no units remain.
+
      */
     public void advance(int currentTurn) {
         if (status == OrderStatus.PLACED) {
