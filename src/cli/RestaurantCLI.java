@@ -216,7 +216,7 @@ public class RestaurantCLI {
     }
 
     private void showArcade(GameState s) {
-        System.out.println(accent("\n+==============================[ ARCADE HUD ]==========================+", MAGENTA));
+        System.out.println(accent("\n+==============================[ RESTAURANT RUSH ]==========================+", MAGENTA));
         System.out.printf("  LEVEL %02d / %02d    SHIFT %s%n", s.getCurrentTurn(),
                 GameState.TOTAL_TURNS, meter(s.getCurrentTurn(), GameState.TOTAL_TURNS, 18));
         System.out.printf("  CASH %s     PAID %d     SERVED %d     WALKOUTS %d%n",
