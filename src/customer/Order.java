@@ -45,17 +45,12 @@ public class Order {
         return finalPriceCents;
     }
 
-    public void setFinalPriceCents(int finalPriceCents) {
-        this.finalPriceCents = finalPriceCents;
-    }
-
     public int getReadyTurn() {
         return readyTurn;
     }
 
     /**
      * Prepares one unit. The order becomes READY when no units remain.
-
      */
     public void advance(int currentTurn) {
         if (status == OrderStatus.PLACED) {

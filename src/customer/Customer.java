@@ -30,8 +30,11 @@ public class Customer {
         return status;
     }
 
-    public void setStatus(CustomerStatus status) {
-        this.status = status;
+    /**
+     * Lifecycle hook: marks the customer as having left unhappy. 
+     */
+    public void leave() {
+        this.status = CustomerStatus.LEFT;
     }
 
     public Table getTable() {
@@ -70,7 +73,6 @@ public class Customer {
 
     /**
      * Waiting or seated customers lose 8 satisfaction points per turn (minimum 0).
-
      */
     public void decreaseSatisfaction() {
         if (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED) {

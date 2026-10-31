@@ -20,7 +20,7 @@ public class Menu {
         items.add(new MenuItem("Pasta", 1800, 2));
     }
 
-    /** Unmodifiable view (UML note on GameState: read-only collection getters). */
+    /** Unmodifiable view */
     public List<MenuItem> getItems() {
         return Collections.unmodifiableList(items);
     }

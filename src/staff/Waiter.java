@@ -4,8 +4,14 @@ import customer.Customer;
 import customer.CustomerStatus;
 import customer.Order;
 import customer.OrderStatus;
-import menu.MenuItem;
 
+/**
+ * Performs the manager-directed Waiter actions on customers and orders.
+ *
+ * The guards here are an intentional second line of defence. The
+ * GameController validates every choice before calling, so these checks
+ * should never fire in normal play.
+ */
 public class Waiter {
 
     public void seat(Customer customer, Table table) {

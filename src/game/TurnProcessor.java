@@ -86,7 +86,7 @@ public class TurnProcessor {
             }
 
             gameState.removeWaitingCustomer(customer);
-            customer.setStatus(CustomerStatus.LEFT);
+            customer.leave();
             gameState.recordUnhappyDeparture();
         }
     }

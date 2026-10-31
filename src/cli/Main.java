@@ -1,6 +1,6 @@
 package cli;
 
-/** Normal project entry point. Forward arguments to the chosen CLI design. */
+/** Sole application entry point; starts the Restaurant Rush command-line game. */
 public class Main {
     public static void main(String[] args) {
         RestaurantCLI.main(args);

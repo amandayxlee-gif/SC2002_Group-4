@@ -1,6 +1,6 @@
 package customer;
 
-/** Lifecycle status of a customer (Person 2 scope). */
+/** Lifecycle status of a customer */
 public enum CustomerStatus {
     WAITING,
     SEATED,
