@@ -1,7 +1,7 @@
 # Stage 1 CLI Functional Evidence
 
 These scripts exercise the playable `cli.Main` entry point against the real
-`GameController`. They are regular keyboard inputs, not mock backend responses.
+`GameController`. 
 
 ## Prepare
 
@@ -29,19 +29,4 @@ NO_COLOR=1 java -cp out cli.Main < evidence/stage1/invalid_input.txt
 | `invalid_input.txt` | Reject text input, invalid menu selection, invalid customer ID and invalid Chef order; recover without consuming a staff action | An accepted seating action after retries; then player quits intentionally |
 
 To capture plain-text logs for manual review without committing generated terminal
-output, append `> victory_output.txt`, etc., to the commands above. Add those
-generated logs to your report only if useful; the input scripts are sufficient
-to reproduce the results.
-
-Suggested report screenshots:
-
-1. The initial Restaurant Rush dashboard, with satisfaction meters and queue.
-2. A successful `TAKE ORDER` **action in the menu** followed by the refreshed
-   kitchen listing with its dish name and price. (No raw Java enum names should
-   appear in the player-facing statuses.)
-3. A Chef completing preparation with the message that serving starts next turn.
-4. A walkout notification and its updated counter (defeat scenario).
-5. The final victory and defeat summaries.
-
-The controller's rules are unchanged: Waiter acts first, Chef acts second,
-the Cashier runs automatically, and only accepted actions consume staff turns.
+output, append `> victory_output.txt`, etc., to the commands above. 

@@ -350,7 +350,9 @@ Relevant test classes include:
 - Stage1RegressionTest
 - Stage1EdgeCaseTest
 
-The legacy Stage1TurnSequenceHarness is also retained.
+An earlier development harness (Stage1TurnSequenceHarness) was removed
+on 31 Oct 2026; its coverage is superseded by the suites above and the
+CLI smoke test.
 
 The regression and edge-case suites have passed 21 tests in total.
 

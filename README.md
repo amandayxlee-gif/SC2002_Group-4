@@ -6,12 +6,12 @@ Restaurant Rush is a Java command-line, turn-based restaurant management game de
 
 Stage 1 - Basic Operation: Implemented and tested, including the single Restaurant Rush CLI.
 
-The Stage 1 implementation includes customer arrivals, seating, food ordering, preparation, serving, eating, payment, customer satisfaction, abandonment, and victory/defeat evaluation. This is based on the assignment requirements
+The Stage 1 implementation includes customer arrivals, seating, food ordering, preparation, serving, eating, payment, customer satisfaction, abandonment, and victory/defeat evaluation, matching the assignment requirements
 
 Stage 2 and Stage 3 are not included in this implementation.
 
 ## Stage 1 Game Rules
-
+Following the assignment requirements:
 - The game lasts exactly 18 turns.
 - There are 2 restaurant tables.
 - The restaurant has 1 Waiter, 1 Chef and 1 Cashier.
@@ -61,7 +61,7 @@ If any requirement is not met, the result is DEFEAT.
 - macOS/Linux terminal or Windows PowerShell
 - No external libraries or build tools required
 
-This setup runs entirely offline
+This setup runs entirely offline.
 
 ## Compile and Run
 

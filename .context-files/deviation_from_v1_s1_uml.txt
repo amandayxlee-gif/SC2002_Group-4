@@ -328,13 +328,14 @@ B9. TEST HARNESS AND AUTOMATED TESTS
 The original UML does not model test classes.
 
 Additional testing components include:
-- harness.Stage1TurnSequenceHarness
 - game.ControllerSimulationTest
 - game.Stage1RegressionTest
 - game.Stage1EdgeCaseTest
+- cli.CLISmokeTest
 
-The legacy harness is retained for development/testing purposes.
-It is not the primary playable application.
+An earlier development harness (harness.Stage1TurnSequenceHarness) was
+removed on 31 Oct 2026: it verified the turn-sequence skeleton before the
+CLI existed, and its coverage is superseded by the suites above.
 
 The Stage 1 regression and edge-case suites have passed
 21 tests in total.
