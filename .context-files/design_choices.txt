@@ -320,7 +320,7 @@ mutable fields.
 
 The playable Stage 1 entry point is:
 
-  game.RestaurantRushCLI
+  cli.RestaurantCLI
 
 The CLI is responsible for:
 - Displaying the restaurant state

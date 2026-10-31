@@ -6,7 +6,7 @@ Restaurant Rush is a Java command-line, turn-based restaurant management game de
 
 Stage 1 - Basic Operation: Implemented and tested, including the single Restaurant Rush CLI.
 
-The Stage 1 implementation includes customer arrivals, seating, food ordering, preparation, serving, eating, payment, customer satisfaction, abandonment, and victory/defeat evaluation.
+The Stage 1 implementation includes customer arrivals, seating, food ordering, preparation, serving, eating, payment, customer satisfaction, abandonment, and victory/defeat evaluation. This is based on the assignment requirements
 
 Stage 2 and Stage 3 are not included in this implementation.
 
@@ -24,7 +24,7 @@ Stage 2 and Stage 3 are not included in this implementation.
   - Take an order.
   - Serve a prepared order.
   - Wait.
-- The Chef can perform one preparation unit per turn.
+- The Chef can perform one preparation unit per turn or wait.
 - The Cashier automatically processes at most one eligible payment per turn.
 - Orders cannot be served on the same turn they become ready.
 - Customers must finish eating before becoming ready to pay.
@@ -61,10 +61,11 @@ If any requirement is not met, the result is DEFEAT.
 - macOS/Linux terminal or Windows PowerShell
 - No external libraries or build tools required
 
+This setup runs entirely offline
+
 ## Compile and Run
 
 The supported entry point is **`cli.Main`**, which launches **`cli.RestaurantCLI`**.
-The older, duplicate `game.RestaurantRushCLI` has been removed.
 
 ### macOS / Linux / VS Code terminal
 
@@ -192,11 +193,10 @@ and full 18-turn victory and defeat scenarios.
 | Package | Responsibilities |
 |---------|------------------|
 | `game` | Game controller, game state, turn processing and player choices |
-| `cli` | Single player-facing Restaurant Rush CLI and entry point |
+| `cli` | Player-facing Restaurant Rush CLI and entry point |
 | `customer` | Customers, orders, statuses and deterministic food selection |
 | `staff` | Waiter, Chef, Cashier and restaurant tables |
 | `menu` | Menu items, prices and preparation requirements |
-| `harness` | Earlier development/testing harness |
 
 The automated tests are stored in the `test/` directory.
 
@@ -204,7 +204,7 @@ The automated tests are stored in the `test/` directory.
 
 - Manager decisions are processed sequentially by the CLI and validated by the controller.
 - Invalid actions do not consume the relevant staff member's available task.
-- Both the Waiter and Chef use `0` to wait in the CLI. The internal Chef skip sentinel is not passed to the controller.
+- Both the Waiter and Chef use `0` to wait in the CLI.
 - The Waiter acts before the Chef.
 - The Chef can prepare an order placed during the current turn.
 - The Cashier processes eligible payments automatically during end-of-turn processing.
@@ -214,10 +214,6 @@ The automated tests are stored in the `test/` directory.
 
 The original assignment brief provides the authoritative project requirements.
 
-Additional design documentation and earlier UML references are maintained in `.context-files/`.
-
-The implementation UML (`stage1_final_uml.puml`) and deviation record describe
-`cli.RestaurantCLI` as the sole playable interface. The original v1 UML is
-preserved separately as a historical baseline.
+`cli.RestaurantCLI` is the sole playable interface for Stage 1, launched through `cli.Main`.
 
 The source code and automated tests reflect the current Stage 1 implementation.

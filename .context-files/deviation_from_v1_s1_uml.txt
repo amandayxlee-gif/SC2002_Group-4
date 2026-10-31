@@ -2,7 +2,7 @@
 DEVIATIONS FROM v1 STAGE 1 UML CLASS DIAGRAM
 Restaurant Rush - SC2002 Group 4
 Original: 27 Oct 2026
-Updated: 29 Oct 2026
+Updated: 31 Oct 2026
 Status: Stage 1 implementation completed and tested
 ================================================================================
 
@@ -141,21 +141,47 @@ Rationale:
 - Automated tests can verify expected orders.
 - The player does not directly select customers' food.
 
-A7. ORDER FINAL PRICE MODIFICATION
+A7. ORDER FINAL PRICE IMMUTABLE (SETTER REMOVED)
 
 Original UML:
 - Order contains finalPriceCents.
 - A setter for this attribute is not shown.
 
-Implementation:
-- finalPriceCents initially equals the selected MenuItem base price.
-- Order provides setFinalPriceCents(int).
+Implementation history:
+- An intermediate implementation added setFinalPriceCents(int).
+- It had no call sites anywhere in the code or tests, and was removed
+  on 31 Oct 2026.
+
+Current implementation:
+- finalPriceCents is set once in the constructor from the selected
+  MenuItem base price and is never modified afterwards.
 
 Rationale:
-- The order's charged amount can be changed independently of
-  the immutable menu-item base price.
-- This supports future pricing rules without changing MenuItem.
-- Stage 1 uses the normal menu prices.
+- A setter that nothing calls is dead code and an encapsulation hole.
+- Stage 1 charges normal menu prices; if a later stage needs a mutable
+  final price (e.g. discounts), it should be added back as a deliberate,
+  documented operation rather than a bare setter.
+
+A8. SHARED BY-ID LOOKUP FINDERS ON GAMESTATE
+
+Original UML:
+- GameState holds the collections of customers, orders and tables.
+- No find-by-id operations are shown; the UML only shows
+  getAvailableTable().
+
+Implementation:
+- GameState additionally provides findCustomer(int),
+  findWaitingCustomer(int), findTable(int) and findOrder(int),
+  each returning the matching object or null.
+
+Rationale:
+- GameController needed the same lookups in both validation and
+  execution, and the CLI needs them for display; without shared finders
+  the same for-loops were duplicated roughly six times.
+- GameState owns the collections, so by-id lookup belongs there,
+  alongside the existing getAvailableTable().
+- Behaviour is unchanged: validation rules, check ordering and error
+  messages are identical to the duplicated-loop version.
 
 ================================================================================
 B. IMPLEMENTATION DETAILS AND COMPLETED FUNCTIONALITY
@@ -225,6 +251,7 @@ Customer lifecycle methods are implemented, including:
 - Serving
 - Eating completion
 - Payment completion
+- Leaving unhappy (leave(), the only way a customer becomes LEFT)
 
 Customers begin with satisfaction 100.
 
@@ -267,14 +294,17 @@ B8. COMMAND-LINE INTERFACE
 
 The playable Stage 1 entry point is:
 
-  game.RestaurantRushCLI
+  cli.Main, which launches cli.RestaurantCLI
 
 The original UML models a RestaurantCLI boundary class and a
 separate Main entry point.
 
-The implemented application uses RestaurantRushCLI as the
-playable command-line entry point. This is an implementation
-structure difference from the original UML.
+Implementation history:
+- An intermediate implementation used a separate game.RestaurantRushCLI
+  class as the entry point.
+- That duplicate was removed on 31 Oct 2026; cli.RestaurantCLI is the
+  sole command-line interface, matching the original UML's boundary
+  class and Main structure.
 
 The CLI displays:
 - Current turn
@@ -354,10 +384,13 @@ of this Stage 1 completion record.
 
 ADDITIONAL STAGE 1 IMPLEMENTATION NOTES
 
-1. Customer.setStatus(CustomerStatus) is public in the current
-   implementation. TurnProcessor uses it when marking abandoned
-   customers as LEFT. This differs from the original intention
-   to restrict status changes to lifecycle methods.
+1. Customer status changes are restricted to lifecycle methods. The
+   public setStatus(CustomerStatus) that existed in an intermediate
+   implementation was removed on 31 Oct 2026. Abandoned customers are
+   marked LEFT through the Customer.leave() lifecycle hook instead,
+   restoring the original intention of design_choices and keeping the
+   lifecycle hooks available as Stage 2 override points. The earlier
+   note describing setStatus as public is superseded.
 
 2. Waiter.takeOrder(Customer, Order) returns void. The
    GameController creates the Order and adds it to GameState.
@@ -365,9 +398,17 @@ ADDITIONAL STAGE 1 IMPLEMENTATION NOTES
    the Customer. This keeps order creation and storage in
    GameController rather than Waiter.
 
-3. The original cli.Main and cli.RestaurantCLI files remain
-   as unimplemented placeholders. The playable Stage 1
-   application is game.RestaurantRushCLI.
+3. cli.Main is the sole application entry point and delegates to
+   cli.RestaurantCLI, the sole implemented command-line interface.
+   The earlier note describing cli.RestaurantCLI as an unimplemented
+   placeholder and game.RestaurantRushCLI as the playable application
+   is superseded; see B8.
+
+4. GameController validation and the staff classes' guard exceptions
+   coexist deliberately as defence-in-depth: GameController validates
+   every choice first (returning player-facing rejection reasons), so
+   the staff guards should never fire in normal play. This is stated
+   in each staff class's javadoc.
 ================================================================================
 END OF DOCUMENT
 ================================================================================
