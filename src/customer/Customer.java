@@ -31,9 +31,7 @@ public class Customer {
     }
 
     /**
-     * Lifecycle hook: marks the customer as having left unhappy. Status
-     * changes only through these hooks — there is deliberately no public
-     * status setter — so Stage 2 subclasses can override the hooks.
+     * Lifecycle hook: marks the customer as having left unhappy. 
      */
     public void leave() {
         this.status = CustomerStatus.LEFT;
@@ -75,7 +73,6 @@ public class Customer {
 
     /**
      * Waiting or seated customers lose 8 satisfaction points per turn (minimum 0).
-
      */
     public void decreaseSatisfaction() {
         if (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED) {

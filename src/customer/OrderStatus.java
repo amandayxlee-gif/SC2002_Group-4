@@ -1,8 +1,6 @@
 package customer;
 
-import menu.MenuItem;
-
-/** Status of an order (Person 2 scope). */
+/** Status of an order */
 public enum OrderStatus {
     PLACED,
     PREPARING,

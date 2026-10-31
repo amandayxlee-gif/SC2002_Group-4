@@ -8,11 +8,11 @@ import java.util.List;
 import staff.Table;
 
 /**
- * Holds all mutable game state (Person 1 scope).
+ * Holds all mutable game state
  *
  * Rules that only need the statistics collected here live in this class
  * (the victory/defeat check); the turn sequence lives in GameController.
- * Collection getters return unmodifiable views (see UML note on GameState).
+ * Collection getters return unmodifiable views.
  */
 public class GameState {
 
@@ -65,8 +65,8 @@ public class GameState {
     /**
      * Average satisfaction over paid customers, using the satisfaction recorded
      * at payment. Returns 0.0 when no customer has paid; the CLI displays that
-     * as N/A (assignment doc section 3.5). Since assuming all payments > 0, no need to 
-     * distinguish btwn 0.0 vs truly N/A
+     * as N/A (assignment doc section 3.5). Since (assuming) all payments > 0, there 
+     * is no need to distinguish between 0.0 vs truly N/A
      */
     public double getAverageSatisfaction() {
         if (paidCount == 0) {
@@ -188,9 +188,8 @@ public class GameState {
     }
 
     /**
-     * Victory/defeat check. Lives here because GameState holds every statistic
-     * the check needs (design_choices.txt section 3.4). Targets
-     * (assignment doc section 2.1): at least 4 paid customers, at least 4500
+     * Victory/defeat check. Targets (assignment doc section 2.1): 
+     * at least 4 paid customers, at least 4500
      * cents revenue, average paid satisfaction at least 60.
      */
     public GameResult checkResult() {
