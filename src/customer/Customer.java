@@ -30,8 +30,13 @@ public class Customer {
         return status;
     }
 
-    public void setStatus(CustomerStatus status) {
-        this.status = status;
+    /**
+     * Lifecycle hook: marks the customer as having left unhappy. Status
+     * changes only through these hooks — there is deliberately no public
+     * status setter — so Stage 2 subclasses can override the hooks.
+     */
+    public void leave() {
+        this.status = CustomerStatus.LEFT;
     }
 
     public Table getTable() {

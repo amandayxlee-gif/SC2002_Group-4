@@ -6,6 +6,13 @@ import customer.CustomerStatus;
 import customer.Order;
 import customer.OrderStatus;
 
+/**
+ * Collects payment from a customer directed to it by the TurnProcessor.
+ *
+ * The guards here are an intentional second line of defence, since the
+ * TurnProcessor only calls for an eligible customer. These checks
+ * should never fire in normal play.
+ */
 public class Cashier {
 
     /**

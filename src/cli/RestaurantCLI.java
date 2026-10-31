@@ -210,6 +210,8 @@ public class RestaurantCLI {
             System.out.println("\nPlayer quit; game not completed. Thanks for playing!");
         } catch (NoSuchElementException e) {
             System.out.println("\nInput ended; game not completed.");
+        } finally {
+            input.close();
         }
     }
 
@@ -237,7 +239,9 @@ public class RestaurantCLI {
         }
     }
 
-    /** A single location for all domain-status-to-player-label translations. */
+    /**
+     * A single location for all domain-status-to-player-label translations.
+     */
     private static String customerStatusLabel(Customer customer) {
         return switch (customer.getStatus()) {
             case WAITING -> "Waiting outside";
@@ -249,6 +253,10 @@ public class RestaurantCLI {
         };
     }
 
+    /**
+     * The READY branch mirrors the controller's serve-timing rule purely for
+     * display; the rule itself lives only in GameController.validateWaiterChoice.
+     */
     private static String orderStatusLabel(Order order, int currentTurn) {
         return switch (order.getStatus()) {
             case PLACED -> "Awaiting preparation";
@@ -265,16 +273,12 @@ public class RestaurantCLI {
         if (choice instanceof SeatChoice seat) {
             success("Customer C" + seat.getCustomerId() + " seated at Table " + seat.getTableId() + ".");
         } else if (choice instanceof TakeOrderChoice takeOrder) {
-            for (Table table : controller.getGameState().getTables()) {
-                if (table.getTableId() == takeOrder.getTableId()) {
-                    Customer customer = table.getOccupant();
-                    Order order = customer.getOrder();
-                    success("Order #" + order.getOrderId() + ": C" + customer.getCustomerId()
-                            + " ordered " + order.getItem().getName() + " ("
-                            + money(order.getFinalPriceCents()) + ").");
-                    return;
-                }
-            }
+            Table table = controller.getGameState().findTable(takeOrder.getTableId());
+            Customer customer = table.getOccupant();
+            Order order = customer.getOrder();
+            success("Order #" + order.getOrderId() + ": C" + customer.getCustomerId()
+                    + " ordered " + order.getItem().getName() + " ("
+                    + money(order.getFinalPriceCents()) + ").");
         } else if (choice instanceof ServeChoice serve) {
             success("Order #" + serve.getOrderId() + " delivered to the customer.");
         } else {
@@ -283,17 +287,16 @@ public class RestaurantCLI {
     }
 
     private void showChefSuccess(int orderId) {
-        for (Order order : controller.getGameState().getOrders()) {
-            if (order.getOrderId() == orderId) {
-                if (order.getRemainingUnits() == 0) {
-                    success("Finished preparing " + order.getItem().getName()
-                            + " (order #" + orderId + "). Ready for serving NEXT turn.");
-                } else {
-                    success("Prepared one unit of " + order.getItem().getName() + " (order #"
-                            + orderId + "). " + order.getRemainingUnits() + " unit(s) left.");
-                }
-                return;
-            }
+        Order order = controller.getGameState().findOrder(orderId);
+        if (order == null) {
+            return;
+        }
+        if (order.getRemainingUnits() == 0) {
+            success("Finished preparing " + order.getItem().getName()
+                    + " (order #" + orderId + "). Ready for serving NEXT turn.");
+        } else {
+            success("Prepared one unit of " + order.getItem().getName() + " (order #"
+                    + orderId + "). " + order.getRemainingUnits() + " unit(s) left.");
         }
     }
 

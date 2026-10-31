@@ -1,11 +1,10 @@
 package game;
 
+import customer.Customer;
+import customer.Order;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import customer.Customer;
-import customer.Order;
 import staff.Table;
 
 /**
@@ -102,6 +101,49 @@ public class GameState {
         return null;
     }
 
+    // Single location for lookups by id: for all the find loops that the
+    // controller (validation and execution) and the CLI (display) all need.
+
+    /** Returns the customer with this id, or null if none exists. */
+    public Customer findCustomer(int customerId) {
+        for (Customer customer : customers) {
+            if (customer.getCustomerId() == customerId) {
+                return customer;
+            }
+        }
+        return null;
+    }
+
+    /** Returns the customer with this id if currently in the waiting queue, or null. */
+    public Customer findWaitingCustomer(int customerId) {
+        for (Customer customer : waitingList) {
+            if (customer.getCustomerId() == customerId) {
+                return customer;
+            }
+        }
+        return null;
+    }
+
+    /** Returns the table with this id, or null if none exists. */
+    public Table findTable(int tableId) {
+        for (Table table : tables) {
+            if (table.getTableId() == tableId) {
+                return table;
+            }
+        }
+        return null;
+    }
+
+    /** Returns the order with this id, or null if none exists. */
+    public Order findOrder(int orderId) {
+        for (Order order : orders) {
+            if (order.getOrderId() == orderId) {
+                return order;
+            }
+        }
+        return null;
+    }
+
     /** Adds a customer to the game. Newly arrived customers also wait. */
     public void addCustomer(Customer customer) {
         customers.add(customer);
@@ -109,8 +151,8 @@ public class GameState {
     }
 
     public void removeWaitingCustomer(Customer customer) {
-    waitingList.remove(customer);
-}
+        waitingList.remove(customer);
+    }
 
     public void addOrder(Order order) {
         orders.add(order);
