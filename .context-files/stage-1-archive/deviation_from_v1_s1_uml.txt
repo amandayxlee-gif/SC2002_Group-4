@@ -267,6 +267,24 @@ Rationale:
 - The assignment defines no explicit start step beyond turn 1
   processing.
 
+A13. AVERAGE-SATISFACTION GETTER RENAMED TO INCLUDE "PAID"
+
+Original UML:
+- GameState exposes getAverageSatisfaction() : double.
+
+Implementation:
+- Renamed to getAveragePaidSatisfaction() : double.
+
+Rationale:
+- The method averages satisfaction over paid customers only, using
+  the satisfaction recorded at payment; the paid qualifier is
+  load-bearing, since the victory rule and the CLI's N/A display
+  both depend on it.
+- The old name invited misreading the statistic as covering all
+  customers.
+- Behaviour is unchanged; call sites in GameState, the CLI and the
+  tests were renamed with it.
+
 ================================================================================
 B. IMPLEMENTATION DETAILS AND COMPLETED FUNCTIONALITY
 ================================================================================

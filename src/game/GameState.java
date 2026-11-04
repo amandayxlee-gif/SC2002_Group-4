@@ -70,7 +70,7 @@ public class GameState {
      * as N/A (assignment doc section 3.5). Since (assuming) all payments > 0, there 
      * is no need to distinguish between 0.0 vs truly N/A
      */
-    public double getAverageSatisfaction() {
+    public double getAveragePaidSatisfaction() {
         if (paidCount == 0) {
             return 0.0;
         }
@@ -234,7 +234,7 @@ public class GameState {
         if (!hasEnoughSatisfaction()) {
             causes.add(String.format(
                     "average paid satisfaction below %d (%.1f)",
-                    VICTORY_MIN_AVERAGE_SATISFACTION, getAverageSatisfaction()));
+                    VICTORY_MIN_AVERAGE_SATISFACTION, getAveragePaidSatisfaction()));
         }
         return causes;
     }
@@ -248,6 +248,6 @@ public class GameState {
     }
 
     private boolean hasEnoughSatisfaction() {
-        return getAverageSatisfaction() >= VICTORY_MIN_AVERAGE_SATISFACTION;
+        return getAveragePaidSatisfaction() >= VICTORY_MIN_AVERAGE_SATISFACTION;
     }
 }

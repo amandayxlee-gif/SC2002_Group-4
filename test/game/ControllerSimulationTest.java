@@ -130,7 +130,7 @@ public class ControllerSimulationTest {
                     turn,
                     state.getPaidCount(),
                     state.getRevenueCents() / 100.0,
-                    state.getAverageSatisfaction());
+                    state.getAveragePaidSatisfaction());
         }
 
         GameState state = controller.getGameState();
@@ -139,7 +139,7 @@ public class ControllerSimulationTest {
         assert state.getCustomers().size() == 6;
         assert state.getPaidCount() == 4;
         assert state.getRevenueCents() == 5100;
-        assert state.getAverageSatisfaction() >= 60;
+        assert state.getAveragePaidSatisfaction() >= 60;
         assert controller.checkResult() == GameResult.VICTORY;
 
         System.out.println("Successful victory simulation passed!");

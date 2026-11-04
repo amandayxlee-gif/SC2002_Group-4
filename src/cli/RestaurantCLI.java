@@ -75,7 +75,7 @@ public class RestaurantCLI {
                 meter(state.getRevenueCents(), GameState.VICTORY_MIN_REVENUE_CENTS, 12),
                 money(state.getRevenueCents()), money(GameState.VICTORY_MIN_REVENUE_CENTS));
         System.out.printf("  | SATISFACTION  %s  avg %s / %d%n",
-                meter(state.getPaidCount() == 0 ? 0 : (int) state.getAverageSatisfaction(),
+                meter(state.getPaidCount() == 0 ? 0 : (int) state.getAveragePaidSatisfaction(),
                         GameState.VICTORY_MIN_AVERAGE_SATISFACTION, 12),
                 average(state), GameState.VICTORY_MIN_AVERAGE_SATISFACTION);
         System.out.println("  +-----------------------------------------------------------------+");
@@ -378,7 +378,7 @@ public class RestaurantCLI {
 
     private static String average(GameState state) {
         return state.getPaidCount() == 0 ? "N/A"
-                : String.format(Locale.ROOT, "%.1f", state.getAverageSatisfaction());
+                : String.format(Locale.ROOT, "%.1f", state.getAveragePaidSatisfaction());
     }
 
     private static String accent(String message, String colour) {
