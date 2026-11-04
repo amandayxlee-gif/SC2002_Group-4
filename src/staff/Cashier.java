@@ -32,7 +32,7 @@ public class Cashier {
             );
         }
 
-        if (currentTurn <= customer.getReadyToPayTurn()) {
+        if (!customer.canPayOn(currentTurn)) {
             throw new IllegalStateException(
                 "Customer cannot pay on the same turn they finished eating"
             );

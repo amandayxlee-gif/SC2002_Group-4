@@ -1,7 +1,7 @@
 ================================================================================
 SC2002 RESTAURANT RUSH - STAGE 1 DESIGN CHOICES
 Originally written: 27 Oct 2026
-Updated: 29 Oct 2026
+Updated: 4 Nov 2026
 Status: Stage 1 implemented and tested
 ================================================================================
 
@@ -100,6 +100,13 @@ IMPORTANT TIMING RULES
 The implementation uses immediate validation and execution rather
 than collecting all decisions and applying them as a batch.
 
+Each manager choice is validated and executed in a single pass:
+the controller resolves the target objects once, runs every check
+before the first mutation, and only then executes. A rejected
+choice therefore changes no state and consumes no staff task, and
+the references that were validated are exactly the ones executed
+on.
+
 ================================================================================
 3. CLASS DESIGN CHOICES
 ================================================================================
@@ -109,7 +116,6 @@ than collecting all decisions and applying them as a batch.
 GameController coordinates the game.
 
 Responsibilities:
-- Start the game
 - Start turns
 - Process scheduled arrivals
 - Validate and execute Waiter choices
@@ -123,13 +129,18 @@ GameController owns GameState and TurnProcessor.
 It maintains references to the staff objects, Menu and
 CustomerChoiceGenerator.
 
-Internal step and validation methods remain private.
+Validation and execution happen in one pass inside the public
+action methods: targets are resolved once, all checks run before
+the first mutation, and rejection exits before any state changes.
 
-The public action-execution methods return a String:
-- null means the choice was valid and executed.
-- A non-null String describes why the choice was rejected.
-
-This enables the CLI to display useful error messages.
+The documented error convention:
+- Player-input errors (invalid or rejected manager choices) are
+  returned as Strings. null means the choice was valid and
+  executed; a non-null String explains the rejection, so the CLI
+  can display it and the manager can redecide.
+- Lifecycle misuse (startTurn/endTurn sequencing, acting after the
+  game is over) throws IllegalStateException, because no player
+  choice can cause it.
 
 3.2 TurnProcessor
 
@@ -193,6 +204,11 @@ Victory requires all of the following after turn 18:
 
 GameState also provides detailed defeat causes.
 
+GameState hands out sequential customer and order IDs through
+nextCustomerId() and nextOrderId(). IDs are allocated once and
+never reused, independent of collection sizes, so collections can
+be pruned in later stages without producing duplicate IDs.
+
 Collection getters return read-only views to protect internal state.
 
 When no customer has paid, the CLI displays average satisfaction
@@ -209,23 +225,30 @@ Customer stores:
 - Associated order
 - Assigned table
 
-Customers begin with satisfaction 100.
+Customers begin with satisfaction 100 (MAX_SATISFACTION).
 
 Customer state changes generally occur through lifecycle methods.
-The current implementation also has a public setStatus() method,
-which TurnProcessor uses to mark abandoned customers as LEFT.
 
 Relevant operations include:
 - seatAt()
 - assignOrder()
 - decreaseSatisfaction()
 - hasAbandoned()
+- canPayOn(turn)
 - onServed()
 - finishEating()
 - onPaid()
 
+canPayOn(turn) is the single home for the payment-timing rule: a
+customer can pay only on a turn after they became READY_TO_PAY.
+TurnProcessor's eligibility check and the Cashier's guard both ask
+this method.
+
 Waiting or seated customers who have not been served lose
-8 satisfaction points per turn, to a minimum of 0.
+DEFAULT_SATISFACTION_LOSS_PER_TURN (8) satisfaction points per
+turn, to a minimum of 0. The constant lives on Customer so Stage 2
+customer types can replace the behaviour through their own classes
+rather than a type check in the controller.
 
 A customer who reaches 0 satisfaction before being served
 leaves without paying.
@@ -249,6 +272,12 @@ Order status changes occur through controlled methods:
 - markServed()
 - markPaid()
 - cancel()
+
+canBeServedOn(turn) is the single home for the serve-timing rule:
+a READY order can be served only on a turn after it became READY.
+Controller validation, the Waiter's guard and the CLI's
+order-status label all ask this method, so the display can never
+drift from the enforced rule.
 
 An order may be served only after the turn it became READY.
 
@@ -355,6 +384,13 @@ on 31 Oct 2026; its coverage is superseded by the suites above and the
 CLI smoke test.
 
 The regression and edge-case suites have passed 21 tests in total.
+
+Re-verified on 4 Nov 2026 after the refinement pass (single-pass
+controller execution, sequential ID allocation, timing rules moved
+onto Order and Customer, satisfaction constants named, startGame()
+removed): all 21 tests and the CLI smoke checks pass, and the
+evidence scripts reproduce the victory, defeat and invalid-input
+scenarios identically.
 
 Verified scenarios include:
 - Scheduled arrivals

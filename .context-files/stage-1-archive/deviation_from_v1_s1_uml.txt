@@ -2,7 +2,7 @@
 DEVIATIONS FROM v1 STAGE 1 UML CLASS DIAGRAM
 Restaurant Rush - SC2002 Group 4
 Original: 27 Oct 2026
-Updated: 31 Oct 2026
+Updated: 4 Nov 2026
 Status: Stage 1 implementation completed and tested
 ================================================================================
 
@@ -182,6 +182,90 @@ Rationale:
   alongside the existing getAvailableTable().
 - Behaviour is unchanged: validation rules, check ordering and error
   messages are identical to the duplicated-loop version.
+
+A9. SEQUENTIAL ID ALLOCATION ON GAMESTATE
+
+Original UML:
+- No ID-allocation operations are shown on GameState.
+
+Earlier implementation:
+- Customer and order IDs were derived as collection size + 1 in
+  GameController.
+
+Implementation:
+- GameState provides nextCustomerId() and nextOrderId(), handing out
+  sequential IDs that are never reused.
+
+Rationale:
+- Size-derived IDs silently assumed the customer and order collections
+  are never pruned; a later stage that removes finished orders would
+  produce duplicate IDs.
+- GameState owns identity (it also owns the by-id finders, see A8),
+  so allocation belongs there.
+- Behaviour is identical for Stage 1, where both collections only grow.
+
+A10. TIMING RULES AS DOMAIN-OBJECT QUERY METHODS
+
+Original UML:
+- Order and Customer carry the timing attributes (readyTurn,
+  readyToPayTurn) but expose no timing-rule operations.
+
+Implementation:
+- Order.canBeServedOn(turn): a READY order can be served only on a
+  turn after it became ready.
+- Customer.canPayOn(turn): a customer can pay only on a turn after
+  becoming READY_TO_PAY.
+- Controller validation, the Waiter and Cashier defence-in-depth
+  guards, TurnProcessor's payment eligibility check and the CLI's
+  order-status label all ask these methods instead of re-encoding the
+  comparisons.
+
+Rationale:
+- Each rule now has a single home in the domain object that owns the
+  data, matching the brief's requirement that game rules stay in
+  domain and control objects, out of the UI.
+- The CLI label can no longer drift from the enforced rule.
+- Rules expressed as operations on the data owner also match how
+  Stage 2 behaviour will be dispatched through customer objects.
+
+A11. CONTROLLER VALIDATION AND EXECUTION MERGED INTO ONE PASS
+
+Original UML (v3):
+- GameController lists validateWaiterChoice(),
+  executeValidWaiterChoice() and validateChefChoice() as separate
+  private methods.
+
+Implementation:
+- executeWaiterChoice(choice) and executeChefChoice(orderId) validate
+  and execute in one pass: targets are resolved once, all checks run
+  before the first mutation, and a rejection exits before any state
+  changes.
+
+Rationale:
+- The two-phase version resolved the same targets twice, so the
+  correctness of execution depended on re-resolving exactly what
+  validation had checked.
+- The merged version guarantees the executed references are the
+  validated ones and removes the duplicated lookups.
+- Rejection semantics are unchanged: an invalid choice still explains
+  why, changes no state and consumes no staff task.
+- Note: the v3 UML must be regenerated to reflect this; the
+  validation/execution split no longer exists as separate methods.
+
+A12. STARTGAME() REMOVED
+
+Original UML (v3):
+- GameController exposes startGame() : void.
+
+Implementation:
+- The method was an empty no-op and has been removed. Construction
+  completes all setup; startTurn() begins play.
+
+Rationale:
+- A public method with no behaviour is a dead API and a misleading
+  lifecycle step.
+- The assignment defines no explicit start step beyond turn 1
+  processing.
 
 ================================================================================
 B. IMPLEMENTATION DETAILS AND COMPLETED FUNCTIONALITY

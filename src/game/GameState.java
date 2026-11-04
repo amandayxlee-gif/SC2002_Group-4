@@ -23,6 +23,8 @@ public class GameState {
     public static final int VICTORY_MIN_AVERAGE_SATISFACTION = 60;
 
     private int currentTurn;
+    private int nextCustomerId = 1;
+    private int nextOrderId = 1;
     private int revenueCents;
     private int paidCount;
     private int servedCount;
@@ -101,8 +103,19 @@ public class GameState {
         return null;
     }
 
-    // Single location for lookups by id: for all the find loops that the
-    // controller (validation and execution) and the CLI (display) all need.
+    // Single location for identity and lookups by id: ID allocation for the
+    // find loops that the controller and the CLI all need. IDs are handed out
+    // sequentially and never reused.
+
+    /** Returns the next unused customer ID. */
+    public int nextCustomerId() {
+        return nextCustomerId++;
+    }
+
+    /** Returns the next unused order ID. */
+    public int nextOrderId() {
+        return nextOrderId++;
+    }
 
     /** Returns the customer with this id, or null if none exists. */
     public Customer findCustomer(int customerId) {

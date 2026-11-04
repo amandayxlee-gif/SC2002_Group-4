@@ -13,8 +13,6 @@ public class ControllerTakeOrderTest {
         Menu menu = new Menu();
         GameController controller = new GameController(menu);
 
-        controller.startGame();
-
         // TURN 1: Customer 1 arrives
         controller.startTurn();
 

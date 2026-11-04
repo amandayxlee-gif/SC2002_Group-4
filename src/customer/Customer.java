@@ -4,6 +4,15 @@ import staff.Table;
 
 public class Customer {
 
+    /** Satisfaction starts at 100 and can never exceed it (assignment doc section 3.2). */
+    public static final int MAX_SATISFACTION = 100;
+
+    /**
+     * Regular-customer default: waiting or seated customers who have not been
+     * served lose 8 satisfaction points per turn (assignment doc section 3.2, step 5).
+     */
+    public static final int DEFAULT_SATISFACTION_LOSS_PER_TURN = 8;
+
     private final int customerId;
     private int satisfaction;
     private CustomerStatus status;
@@ -14,7 +23,7 @@ public class Customer {
 
     public Customer(int customerId) {
         this.customerId = customerId;
-        this.satisfaction = 100;
+        this.satisfaction = MAX_SATISFACTION;
         this.status = CustomerStatus.WAITING;
     }
 
@@ -72,16 +81,21 @@ public class Customer {
     }
 
     /**
-     * Waiting or seated customers lose 8 satisfaction points per turn (minimum 0).
+     * Waiting or seated customers lose satisfaction each turn (minimum 0).
      */
     public void decreaseSatisfaction() {
         if (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED) {
-            satisfaction = Math.max(0, satisfaction - 8);
+            satisfaction = Math.max(0, satisfaction - DEFAULT_SATISFACTION_LOSS_PER_TURN);
         }
     }
 
+    /** A customer can pay only on a turn after they finished eating. */
+    public boolean canPayOn(int turn) {
+        return status == CustomerStatus.READY_TO_PAY && turn > readyToPayTurn;
+    }
+
     public boolean hasAbandoned() {
-        return satisfaction == 0 && (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED);
+        return satisfaction <= 0 && (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED);
     }
 
     public void onServed(int currentTurn) {
