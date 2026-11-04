@@ -17,6 +17,13 @@ import staff.Waiter;
  *
  * Manager decisions are validated before execution.
  * Invalid choices return an error without changing game state.
+ *
+ * Error convention:
+ * - Player-input errors (invalid or rejected manager choices) are returned as
+ *   Strings: null means the choice was valid and executed, non-null explains
+ *   the rejection. The CLI displays the message and the manager redecides.
+ * - Lifecycle misuse (startTurn/endTurn sequencing, acting after game over)
+ *   throws IllegalStateException, because no player choice can cause it.
  */
 public class GameController {
 
@@ -48,13 +55,6 @@ public class GameController {
     }
 
     /**
-     * The game starts at turn 0 with two empty tables.
-     */
-    public void startGame() {
-        // No additional setup needed.
-    }
-
-    /**
      * Starts a new turn and processes customer arrivals.
      */
     public void startTurn() {
@@ -82,7 +82,11 @@ public class GameController {
     }
 
     /**
-     * Validates and executes the Waiter's chosen action.
+     * Validates and executes the Waiter's chosen action in one pass.
+     *
+     * Targets are resolved once: every check runs before the first mutation,
+     * so a rejected choice changes no state and consumes no staff task. The
+     * references resolved during validation are the same ones executed on.
      *
      * Returns null if successful, otherwise an error message.
      */
@@ -96,13 +100,101 @@ public class GameController {
             return "Waiter has already acted this turn";
         }
 
-        String error = validateWaiterChoice(choice);
-
-        if (error != null) {
-            return error;
+        if (choice == null) {
+            return "No waiter choice provided";
         }
 
-        executeValidWaiterChoice(choice);
+        if (choice instanceof SeatChoice seatChoice) {
+
+            Customer customer = gameState.findWaitingCustomer(seatChoice.getCustomerId());
+
+            if (customer == null) {
+                return "Customer is not in the waiting queue";
+            }
+
+            Table table = gameState.findTable(seatChoice.getTableId());
+
+            if (table == null) {
+                return "Table does not exist";
+            }
+
+            if (!table.isAvailable()) {
+                return "Table is already occupied";
+            }
+
+            waiter.seat(customer, table);
+            gameState.removeWaitingCustomer(customer);
+        }
+
+        // TAKE_ORDER
+        else if (choice instanceof TakeOrderChoice takeOrderChoice) {
+
+            Table table = gameState.findTable(takeOrderChoice.getTableId());
+
+            if (table == null) {
+                return "Table does not exist";
+            }
+
+            Customer customer = table.getOccupant();
+
+            if (customer == null) {
+                return "Table has no customer";
+            }
+
+            if (customer.getStatus() != CustomerStatus.SEATED) {
+                return "Customer is not seated";
+            }
+
+            if (customer.getOrder() != null) {
+                return "Customer already has an order";
+            }
+
+            MenuItem item = choiceGenerator.chooseItem(menu, customer);
+            Order order = new Order(gameState.nextOrderId(), customer.getCustomerId(), item);
+
+            waiter.takeOrder(customer, order);
+            gameState.addOrder(order);
+        }
+
+        // SERVE
+        else if (choice instanceof ServeChoice serveChoice) {
+
+            Order order = gameState.findOrder(serveChoice.getOrderId());
+
+            if (order == null) {
+                return "Order does not exist";
+            }
+
+            if (order.getStatus() != OrderStatus.READY) {
+                return "Order is not ready";
+            }
+
+            if (!order.canBeServedOn(gameState.getCurrentTurn())) {
+                return "Cannot serve on the same turn food becomes ready";
+            }
+
+            Customer customer = gameState.findCustomer(order.getCustomerId());
+
+            if (customer == null) {
+                return "Customer does not exist";
+            }
+
+            if (customer.getStatus() != CustomerStatus.SEATED) {
+                return "Customer is not seated";
+            }
+
+            if (customer.getOrder() != order) {
+                return "Order does not belong to customer";
+            }
+
+            waiter.serve(order, customer, gameState.getCurrentTurn());
+            gameState.recordServedCustomer();
+        }
+
+        // WAIT requires no validation or action.
+        else if (!(choice instanceof WaitChoice)) {
+            return "Unsupported waiter choice";
+        }
 
         waiterActedThisTurn = true;
 
@@ -110,7 +202,9 @@ public class GameController {
     }
 
     /**
-     * Validates and executes the Chef's chosen action.
+     * Validates and executes the Chef's chosen action in one pass.
+     *
+     * Returns null if successful, otherwise an error message.
      */
     public String executeChefChoice(int orderId) {
 
@@ -122,16 +216,20 @@ public class GameController {
             return "Chef has already acted this turn";
         }
 
-        String error = validateChefChoice(orderId);
-
-        if (error != null) {
-            return error;
-        }
-
         Order order = gameState.findOrder(orderId);
 
         if (order == null) {
             return "Order does not exist";
+        }
+
+        if (order.getStatus() != OrderStatus.PLACED
+                && order.getStatus() != OrderStatus.PREPARING) {
+
+            return "Order cannot be prepared";
+        }
+
+        if (order.getRemainingUnits() <= 0) {
+            return "Order has no remaining preparation units";
         }
 
         chef.prepare(order, gameState.getCurrentTurn());
@@ -180,188 +278,12 @@ public class GameController {
 
             if (arrivalTurn == currentTurn) {
 
-                int customerId = gameState.getCustomers().size() + 1;
+                int customerId = gameState.nextCustomerId();
 
                 Customer customer = new Customer(customerId);
 
                 gameState.addCustomer(customer);
             }
         }
-    }
-
-    /**
-     * Checks whether a Waiter action is valid.
-     */
-    private String validateWaiterChoice(WaiterChoice choice) {
-
-        if (choice == null) {
-            return "No waiter choice provided";
-        }
-
-        // SEAT
-        if (choice instanceof SeatChoice seatChoice) {
-
-            Customer customer = gameState.findWaitingCustomer(seatChoice.getCustomerId());
-
-            if (customer == null) {
-                return "Customer is not in the waiting queue";
-            }
-
-            Table table = gameState.findTable(seatChoice.getTableId());
-
-            if (table == null) {
-                return "Table does not exist";
-            }
-
-            if (!table.isAvailable()) {
-                return "Table is already occupied";
-            }
-
-            return null;
-        }
-
-        // TAKE_ORDER
-        if (choice instanceof TakeOrderChoice takeOrderChoice) {
-
-            Table table = gameState.findTable(takeOrderChoice.getTableId());
-
-            if (table == null) {
-                return "Table does not exist";
-            }
-
-            Customer customer = table.getOccupant();
-
-            if (customer == null) {
-                return "Table has no customer";
-            }
-
-            if (customer.getStatus() != CustomerStatus.SEATED) {
-                return "Customer is not seated";
-            }
-
-            if (customer.getOrder() != null) {
-                return "Customer already has an order";
-            }
-
-            return null;
-        }
-
-        // SERVE
-        if (choice instanceof ServeChoice serveChoice) {
-
-            Order order = gameState.findOrder(serveChoice.getOrderId());
-
-            if (order == null) {
-                return "Order does not exist";
-            }
-
-            if (order.getStatus() != OrderStatus.READY) {
-                return "Order is not ready";
-            }
-
-            if (gameState.getCurrentTurn() <= order.getReadyTurn()) {
-                return "Cannot serve on the same turn food becomes ready";
-            }
-
-            Customer customer = gameState.findCustomer(order.getCustomerId());
-
-            if (customer == null) {
-                return "Customer does not exist";
-            }
-
-            if (customer.getStatus() != CustomerStatus.SEATED) {
-                return "Customer is not seated";
-            }
-
-            if (customer.getOrder() != order) {
-                return "Order does not belong to customer";
-            }
-
-            return null;
-        }
-
-        // WAIT
-        if (choice instanceof WaitChoice) {
-            return null;
-        }
-
-        return "Unsupported waiter choice";
-    }
-
-    /**
-     * Executes a Waiter action that has passed validation.
-     */
-    private void executeValidWaiterChoice(WaiterChoice choice) {
-
-        // SEAT
-        if (choice instanceof SeatChoice seatChoice) {
-
-            Customer customer = gameState.findWaitingCustomer(seatChoice.getCustomerId());
-            Table table = gameState.findTable(seatChoice.getTableId());
-
-            waiter.seat(customer, table);
-
-            gameState.removeWaitingCustomer(customer);
-
-            return;
-        }
-
-        // TAKE_ORDER
-        if (choice instanceof TakeOrderChoice takeOrderChoice) {
-
-            Table table = gameState.findTable(takeOrderChoice.getTableId());
-            Customer customer = table.getOccupant();
-
-            MenuItem item = choiceGenerator.chooseItem(menu, customer);
-
-            int orderId = gameState.getOrders().size() + 1;
-
-            Order order = new Order(orderId, customer.getCustomerId(), item);
-
-            waiter.takeOrder(customer, order);
-
-            gameState.addOrder(order);
-
-            return;
-        }
-
-        // SERVE
-        if (choice instanceof ServeChoice serveChoice) {
-
-            Order order = gameState.findOrder(serveChoice.getOrderId());
-            Customer customer = gameState.findCustomer(order.getCustomerId());
-
-            waiter.serve(order, customer, gameState.getCurrentTurn());
-
-            gameState.recordServedCustomer();
-
-            return;
-        }
-
-        // WAIT requires no action.
-    }
-
-    /**
-     * Checks whether the Chef can prepare the selected order.
-     */
-    private String validateChefChoice(int orderId) {
-
-        Order order = gameState.findOrder(orderId);
-
-        if (order == null) {
-            return "Order does not exist";
-        }
-
-        if (order.getStatus() != OrderStatus.PLACED
-                && order.getStatus() != OrderStatus.PREPARING) {
-
-            return "Order cannot be prepared";
-        }
-
-        if (order.getRemainingUnits() <= 0) {
-            return "Order has no remaining preparation units";
-        }
-
-        return null;
     }
 }

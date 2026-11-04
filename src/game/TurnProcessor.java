@@ -42,8 +42,7 @@ public class TurnProcessor {
      */
     private void processPayments(int currentTurn) {
         for (Customer customer : gameState.getCustomers()) {
-            if (customer.getStatus() == CustomerStatus.READY_TO_PAY
-                    && currentTurn > customer.getReadyToPayTurn()) {
+            if (customer.canPayOn(currentTurn)) {
 
                 int amount = cashier.processPayment(customer, currentTurn);
                 gameState.recordPayment(customer, amount);

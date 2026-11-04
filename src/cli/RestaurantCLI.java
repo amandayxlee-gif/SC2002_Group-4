@@ -35,6 +35,9 @@ public class RestaurantCLI {
     private static final String YELLOW = "\u001B[93m";
     private static final String RED = "\u001B[91m";
 
+    /** Display-only: patience at or below this is highlighted as a walkout risk. */
+    private static final int LOW_SATISFACTION_WARNING = 32;
+
     private final GameController controller;
     private final Scanner input;
 
@@ -72,7 +75,7 @@ public class RestaurantCLI {
                 meter(state.getRevenueCents(), GameState.VICTORY_MIN_REVENUE_CENTS, 12),
                 money(state.getRevenueCents()), money(GameState.VICTORY_MIN_REVENUE_CENTS));
         System.out.printf("  | SATISFACTION  %s  avg %s / %d%n",
-                meter(state.getPaidCount() == 0 ? 0 : (int) state.getAverageSatisfaction(),
+                meter(state.getPaidCount() == 0 ? 0 : (int) state.getAveragePaidSatisfaction(),
                         GameState.VICTORY_MIN_AVERAGE_SATISFACTION, 12),
                 average(state), GameState.VICTORY_MIN_AVERAGE_SATISFACTION);
         System.out.println("  +-----------------------------------------------------------------+");
@@ -84,8 +87,9 @@ public class RestaurantCLI {
         for (Customer customer : state.getWaitingList()) {
             String line = String.format(Locale.ROOT, "    C%-2d SAT %3d/100 %s",
                     customer.getCustomerId(), customer.getSatisfaction(),
-                    meter(customer.getSatisfaction(), 100, 10));
-            System.out.println(customer.getSatisfaction() <= 32 ? accent(line, RED) : line);
+                    meter(customer.getSatisfaction(), Customer.MAX_SATISFACTION, 10));
+            System.out.println(customer.getSatisfaction() <= LOW_SATISFACTION_WARNING
+                    ? accent(line, RED) : line);
         }
 
         System.out.println(accent("  >>> TABLE STATUS <<<", CYAN));
@@ -167,11 +171,10 @@ public class RestaurantCLI {
         System.out.println("+=====================================================================+\n");
     }
 
-    /** Start -> state -> Waiter -> refreshed state -> Chef -> automatic updates. */
+    /** State -> Waiter -> refreshed state -> Chef -> automatic updates, per turn. */
     public void run() {
         welcome();
         try {
-            controller.startGame();
             while (!controller.isGameOver()) {
                 controller.startTurn();
                 displayState();
@@ -254,15 +257,16 @@ public class RestaurantCLI {
     }
 
     /**
-     * The READY branch mirrors the controller's serve-timing rule purely for
-     * display; the rule itself lives only in GameController.validateWaiterChoice.
+     * A single location for all domain-status-to-player-label translations.
+     * The READY branch asks Order.canBeServedOn — the same rule the
+     * controller validates against — so the display can never drift from it.
      */
     private static String orderStatusLabel(Order order, int currentTurn) {
         return switch (order.getStatus()) {
             case PLACED -> "Awaiting preparation";
             case PREPARING -> "Cooking";
-            case READY -> currentTurn <= order.getReadyTurn()
-                    ? "Ready (serve next turn)" : "Ready to serve";
+            case READY -> order.canBeServedOn(currentTurn)
+                    ? "Ready to serve" : "Ready (serve next turn)";
             case SERVED -> "Meal delivered";
             case PAID -> "Bill paid";
             case CANCELLED -> "Cancelled";
@@ -374,7 +378,7 @@ public class RestaurantCLI {
 
     private static String average(GameState state) {
         return state.getPaidCount() == 0 ? "N/A"
-                : String.format(Locale.ROOT, "%.1f", state.getAverageSatisfaction());
+                : String.format(Locale.ROOT, "%.1f", state.getAveragePaidSatisfaction());
     }
 
     private static String accent(String message, String colour) {

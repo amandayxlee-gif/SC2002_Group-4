@@ -78,7 +78,7 @@ public class Waiter {
             );
         }
 
-        if (currentTurn <= order.getReadyTurn()) {
+        if (!order.canBeServedOn(currentTurn)) {
             throw new IllegalStateException(
                 "Order cannot be served on the same turn it became ready"
             );

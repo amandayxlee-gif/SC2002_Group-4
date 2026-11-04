@@ -102,7 +102,7 @@ public class Stage1EdgeCaseTest {
         check(state.getPaidCount() == 0,
                 "Paid count must start at zero");
 
-        check(state.getAverageSatisfaction() == 0.0,
+        check(state.getAveragePaidSatisfaction() == 0.0,
                 "Average satisfaction must start at zero");
 
         check(!state.isGameOver(),
@@ -325,7 +325,7 @@ public class Stage1EdgeCaseTest {
         check(state.getRevenueCents() == 900,
                 "Salad payment must add 900 cents");
 
-        check(state.getAverageSatisfaction() == 84.0,
+        check(state.getAveragePaidSatisfaction() == 84.0,
                 "Paid satisfaction should be 84");
 
         check(state.getTables().get(0).isAvailable(),
@@ -449,7 +449,7 @@ public class Stage1EdgeCaseTest {
         check(state.getRevenueCents() == 6000,
                 "Revenue must be 6000 cents");
 
-        check(state.getAverageSatisfaction() == 100.0,
+        check(state.getAveragePaidSatisfaction() == 100.0,
                 "Average satisfaction must be 100");
 
         check(state.checkResult() == GameResult.VICTORY,

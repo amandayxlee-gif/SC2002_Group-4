@@ -50,6 +50,14 @@ public class Order {
     }
 
     /**
+     * A READY order can be served only on a turn after it became ready
+     * (assignment doc section 3.2, step 3). 
+     */
+    public boolean canBeServedOn(int turn) {
+        return status == OrderStatus.READY && turn > readyTurn;
+    }
+
+    /**
      * Prepares one unit. The order becomes READY when no units remain.
      */
     public void advance(int currentTurn) {
