@@ -1,5 +1,7 @@
 package customer;
 
+import java.util.List;
+import menu.MenuItem;
 import staff.Table;
 
 public class Customer {
@@ -53,7 +55,7 @@ public class Customer {
     }
 
     public boolean canPayOn(int currentTurn) {
-        return status == CustomerStatus.READY_TO_PAY;
+        return status == CustomerStatus.READY_TO_PAY && currentTurn > readyToPayTurn;
     }
 
     public void seatAt(Table table) {
@@ -71,16 +73,15 @@ public class Customer {
 
     public void assignOrder(Order order) {
         this.order = order;
+        order.setFinalPriceCents(calculateBillCents());
     }
 
-    /** Standard customer loses 8 satisfaction points per waiting/seated turn. */
     public void decreaseSatisfaction() {
         if (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED) {
             satisfaction = Math.max(0, satisfaction - 8);
         }
     }
 
-    /** Lifecycle method when a customer leaves or abandons. */
     public void leave() {
         if (table != null) {
             table.free();
@@ -110,11 +111,18 @@ public class Customer {
         this.status = CustomerStatus.PAID;
     }
 
-    /** Calculates bill in cents (Standard customer pays 100%). */
     public int calculateBillCents() {
         if (order == null)
             return 0;
-        return order.getFinalPriceCents();
+        return order.getItem().getPriceCents();
+    }
+
+    public MenuItem chooseMenuItem(List<MenuItem> items) {
+        if (items == null || items.isEmpty()) {
+            throw new IllegalStateException("Menu is empty");
+        }
+        int index = Math.floorMod(customerId - 1, items.size());
+        return items.get(index);
     }
 
     public String getCustomerTypeLabel() {

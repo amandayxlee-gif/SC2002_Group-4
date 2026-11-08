@@ -1,12 +1,14 @@
 package customer;
 
+import java.util.List;
+import menu.MenuItem;
+
 public class CriticCustomer extends Customer {
 
     public CriticCustomer(int customerId) {
         super(customerId);
     }
 
-    /** Critic customer loses 12 satisfaction points per turn. */
     @Override
     public void decreaseSatisfaction() {
         if (getStatus() == CustomerStatus.WAITING || getStatus() == CustomerStatus.SEATED) {
@@ -17,5 +19,15 @@ public class CriticCustomer extends Customer {
     @Override
     public String getCustomerTypeLabel() {
         return "Critic";
+    }
+
+    @Override
+    public MenuItem chooseMenuItem(List<MenuItem> items) {
+        for (MenuItem item : items) {
+            if ("Pasta".equalsIgnoreCase(item.getName())) {
+                return item;
+            }
+        }
+        return super.chooseMenuItem(items);
     }
 }
