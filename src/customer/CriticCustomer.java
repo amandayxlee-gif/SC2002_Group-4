@@ -3,7 +3,10 @@ package customer;
 import java.util.List;
 import menu.MenuItem;
 
+/** Critic customer: loses 12 satisfaction per waiting turn and always orders Pasta. */
 public class CriticCustomer extends Customer {
+
+    public static final int CRITIC_SATISFACTION_LOSS_PER_TURN = 12;
 
     public CriticCustomer(int customerId) {
         super(customerId);
@@ -12,7 +15,7 @@ public class CriticCustomer extends Customer {
     @Override
     public void decreaseSatisfaction() {
         if (getStatus() == CustomerStatus.WAITING || getStatus() == CustomerStatus.SEATED) {
-            satisfaction = Math.max(0, satisfaction - 12);
+            satisfaction = Math.max(0, satisfaction - CRITIC_SATISFACTION_LOSS_PER_TURN);
         }
     }
 

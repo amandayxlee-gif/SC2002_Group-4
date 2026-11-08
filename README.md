@@ -55,6 +55,36 @@ Regular and VIP customers select food using a deterministic rule based on custom
 
 The selection sequence is Salad, Burger, Pasta, then repeats. Critic customers instead prefer Pasta.
 
+## Stage 1 → Stage 2 Transition
+
+Compare the two stages:
+`https://github.com/amandayxlee-gif/SC2002_Group-4/compare/stage-1...stage-2`
+
+### New files
+
+| File | Responsibility |
+| --- | --- |
+| `src/customer/VIPCustomer.java` | VIP customer: 5-point patience loss per waiting turn, 10% off the bill |
+| `src/customer/CriticCustomer.java` | Critic customer: 12-point patience loss, always orders Pasta |
+| `test/cli/Stage2IntegrationGateTest.java` | Automated gate over Stage 2 rules, arrivals, timing and billing |
+| `test/cli/Stage2CLIPresentationTest.java` | Verifies the CLI shows customer types and discounted prices |
+| `evidence/stage2/` | Reproducible victory, defeat, invalid-input and Critic scenarios |
+
+### Existing files changed, and why
+
+| File | Change | Reason |
+| --- | --- | --- |
+| `src/customer/Customer.java` | `satisfaction` changed from `private` to `protected`; `chooseMenuItem`, `calculateBillCents` and `getCustomerTypeLabel` introduced as overridable hooks; the discounted price is locked into the order in `assignOrder` | Stage 2 behaviour must be dispatched through customer objects (polymorphism), not through type checks in the turn controller (docx §4.2). The bill differs per customer type, so the price is finalised by the customer when the order is placed. `protected` `satisfaction` lets subclasses decrement it in their overrides; the alternative of keeping it private behind a guarded mutator was considered and traded off for override simplicity |
+| `src/customer/CustomerChoiceGenerator.java` | Now a thin delegation to `customer.chooseMenuItem(...)` | Menu choice becomes polymorphic; the empty-menu guard moved into `Customer`. The generator remains the single swap point if the deterministic rule is ever replaced by seeded randomness (docx §2.2), keeping the controller unchanged |
+| `src/customer/Order.java` | `setFinalPriceCents` added, writeable only while the order is `PLACED` | Locks the customer-specific price at placement, so the Cashier charges the stored amount without knowing customer types, and Happy-Hour-style later policies have a single price-freeze point |
+| `src/game/GameController.java` | Scheduled arrivals built from a factory list: VIP at turn 4, Critic at turn 13 | The reproducible base-setting run must include at least one VIP and one Critic while keeping all six arrivals (docx §4.2) |
+| `src/cli/RestaurantCLI.java` | Customer type labels in queue, tables and orders; orders display the charged price against the menu price; updated welcome text | The manager must see which customer type they are serving and what the dish will actually cost |
+| `test/game/ControllerSimulationTest.java` | Simulation expectations updated | VIP patience and pricing change the numbers a full 18-turn run produces |
+
+### What still works
+
+All 10 Stage 1 regression test groups and 11 edge-case tests pass unchanged on the Stage 2 tree, and the `evidence/stage1/` scripts remain replayable (their expected numbers shift because VIP pricing and patience change the outcomes). The timing rules are re-verified by these suites — during the customer rewrite, the guard that forbids paying on the same turn a customer finished eating was briefly lost, and the restored regression coverage is what surfaced it before integration. The victory and defeat criteria, turn structure and staff limits are untouched.
+
 ## Victory Conditions
 
 Victory is evaluated after turn 18.

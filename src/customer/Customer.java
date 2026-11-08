@@ -6,7 +6,11 @@ import staff.Table;
 
 public class Customer {
 
+    /** Satisfaction starts at 100 and can never exceed it. */
     public static final int MAX_SATISFACTION = 100;
+
+    /** Regular customers lose this many satisfaction points per waiting or seated turn. */
+    public static final int DEFAULT_SATISFACTION_LOSS_PER_TURN = 8;
 
     private final int customerId;
     protected int satisfaction;
@@ -54,6 +58,7 @@ public class Customer {
         return readyToPayTurn;
     }
 
+    /** A customer can pay only on a turn after they finished eating. */
     public boolean canPayOn(int currentTurn) {
         return status == CustomerStatus.READY_TO_PAY && currentTurn > readyToPayTurn;
     }
@@ -71,17 +76,23 @@ public class Customer {
         table.occupy(this);
     }
 
+    /** Assigns an order and locks in this customer's final bill at placement. */
     public void assignOrder(Order order) {
         this.order = order;
         order.setFinalPriceCents(calculateBillCents());
     }
 
+    /**
+     * Waiting or seated customers who have not been served lose satisfaction
+     * (floor 0). Subclasses override this with their own loss rate.
+     */
     public void decreaseSatisfaction() {
         if (status == CustomerStatus.WAITING || status == CustomerStatus.SEATED) {
-            satisfaction = Math.max(0, satisfaction - 8);
+            satisfaction = Math.max(0, satisfaction - DEFAULT_SATISFACTION_LOSS_PER_TURN);
         }
     }
 
+    /** Leaves unhappy: frees the table and cancels any unpaid order. */
     public void leave() {
         if (table != null) {
             table.free();
@@ -117,6 +128,7 @@ public class Customer {
         return order.getItem().getPriceCents();
     }
 
+    /** Deterministic choice rule: menu items are picked in rotation by customer ID. */
     public MenuItem chooseMenuItem(List<MenuItem> items) {
         if (items == null || items.isEmpty()) {
             throw new IllegalStateException("Menu is empty");

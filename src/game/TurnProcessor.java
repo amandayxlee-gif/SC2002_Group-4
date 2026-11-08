@@ -2,10 +2,7 @@ package game;
 
 import customer.Customer;
 import customer.CustomerStatus;
-import customer.Order;
-import customer.OrderStatus;
 import staff.Cashier;
-import staff.Table;
 
 public class TurnProcessor {
 
@@ -62,26 +59,13 @@ public class TurnProcessor {
     }
 
     /**
-     * Remove customers who reach zero satisfaction.
+     * Customers who reach zero satisfaction leave without paying.
+     * Customer.leave() frees the table and cancels any unpaid order.
      */
     private void handleAbandonment() {
         for (Customer customer : gameState.getCustomers()) {
             if (!customer.hasAbandoned()) {
                 continue;
-            }
-
-            Order order = customer.getOrder();
-
-            if (order != null
-                    && order.getStatus() != OrderStatus.PAID
-                    && order.getStatus() != OrderStatus.CANCELLED) {
-                order.cancel();
-            }
-
-            Table table = customer.getTable();
-
-            if (table != null && table.getOccupant() == customer) {
-                table.free();
             }
 
             gameState.removeWaitingCustomer(customer);

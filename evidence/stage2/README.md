@@ -1,4 +1,4 @@
-# Stage 2 gameplay evidence — Caleb
+# Stage 2 gameplay evidence
 
 ## Integrated rules
 
