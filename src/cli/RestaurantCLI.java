@@ -20,12 +20,6 @@ import game.WaiterChoice;
 import menu.Menu;
 import staff.Table;
 
-/**
- * Restaurant Rush's single interactive command-line boundary.
- *
- * This class reads decisions and renders snapshots of the domain objects.
- * GameController alone validates and changes the simulation state.
- */
 public class RestaurantCLI {
 
     private static final String RESET = "\u001B[0m";
@@ -35,7 +29,6 @@ public class RestaurantCLI {
     private static final String YELLOW = "\u001B[93m";
     private static final String RED = "\u001B[91m";
 
-    /** Display-only: patience at or below this is highlighted as a walkout risk. */
     private static final int LOW_SATISFACTION_WARNING = 32;
 
     private final GameController controller;
@@ -49,7 +42,6 @@ public class RestaurantCLI {
         this.input = new Scanner(System.in);
     }
 
-    /** Run from the repository root with: java -cp out cli.Main */
     public static void main(String[] args) {
         if (args.length > 0) {
             System.out.println("Usage: java -cp out cli.Main");
@@ -58,7 +50,6 @@ public class RestaurantCLI {
         new RestaurantCLI(new GameController(new Menu())).run();
     }
 
-    /** Display the current controller-owned state, without modifying it. */
     public void displayState() {
         GameState state = controller.getGameState();
         System.out.println(accent("\n+=========================[ RESTAURANT RUSH ]=========================+", MAGENTA));
@@ -85,9 +76,10 @@ public class RestaurantCLI {
             System.out.println("    No customers waiting.");
         }
         for (Customer customer : state.getWaitingList()) {
-            String line = String.format(Locale.ROOT, "    C%-2d SAT %3d/100 %s",
+            String line = String.format(Locale.ROOT, "    C%-2d SAT %3d/100 %s  %s",
                     customer.getCustomerId(), customer.getSatisfaction(),
-                    meter(customer.getSatisfaction(), Customer.MAX_SATISFACTION, 10));
+                    meter(customer.getSatisfaction(), Customer.MAX_SATISFACTION, 10),
+                    customerTypeLabel(customer));
             System.out.println(customer.getSatisfaction() <= LOW_SATISFACTION_WARNING
                     ? accent(line, RED) : line);
         }
@@ -98,16 +90,16 @@ public class RestaurantCLI {
                 System.out.printf("    T%d: Empty / ready for guest%n", table.getTableId());
             } else {
                 Customer customer = table.getOccupant();
-                System.out.printf("    T%d: C%d | %s | satisfaction %d%n",
+                System.out.printf("    T%d: C%d | %s | satisfaction %d  %s%n",
                         table.getTableId(), customer.getCustomerId(),
-                        customerStatusLabel(customer), customer.getSatisfaction());
+                        customerStatusLabel(customer), customer.getSatisfaction(),
+                        customerTypeLabel(customer));
             }
         }
         showOrders();
         System.out.println(accent("+=====================================================================+", MAGENTA));
     }
 
-    /** Read a single choice; invalid menu input never reaches GameController. */
     public WaiterChoice getWaiterChoice() {
         while (true) {
             System.out.println(accent("\n  [NEXT MOVE] WAITER SELECT", MAGENTA));
@@ -135,7 +127,6 @@ public class RestaurantCLI {
         }
     }
 
-    /** A UI choice of 0 maps to -1 so the controller is never asked to prepare it. */
     public int getChefOrderChoice() {
         System.out.println(accent("\n  [CHEF STATION]", CYAN));
         showOrders();
@@ -171,7 +162,6 @@ public class RestaurantCLI {
         System.out.println("+=====================================================================+\n");
     }
 
-    /** State -> Waiter -> refreshed state -> Chef -> automatic updates, per turn. */
     public void run() {
         welcome();
         try {
@@ -184,7 +174,7 @@ public class RestaurantCLI {
                     String error = controller.executeWaiterChoice(choice);
                     if (error == null) {
                         showWaiterSuccess(choice);
-                        displayState(); // Refreshed immediately after the accepted action.
+                        displayState();
                         break;
                     }
                     displayError(error);
@@ -224,6 +214,7 @@ public class RestaurantCLI {
         System.out.println(accent("+=====================================================================+", MAGENTA));
         System.out.println("  18 turns | 2 tables | Waiter + Chef | automatic Cashier");
         System.out.println("  WIN: 4+ paid guests, $45.00+ revenue, 60+ average satisfaction");
+        System.out.println("  GUESTS: REGULAR (-8 patience), VIP (-5, 10% off), CRITIC (-12)");
         System.out.println("  Enter 0 to wait; Q quits at any input prompt.");
     }
 
@@ -235,16 +226,27 @@ public class RestaurantCLI {
             return;
         }
         for (Order order : state.getOrders()) {
-            System.out.printf("    #%d C%d  %-7s %-7s  %-25s  prep left %d%n",
+            Customer customer = state.findCustomer(order.getCustomerId());
+            System.out.printf("    #%d C%d  %-7s %-24s  %-25s  prep left %d  %s%n",
                     order.getOrderId(), order.getCustomerId(), order.getItem().getName(),
-                    money(order.getFinalPriceCents()), orderStatusLabel(order, state.getCurrentTurn()),
-                    order.getRemainingUnits());
+                    orderPriceLabel(order), orderStatusLabel(order, state.getCurrentTurn()),
+                    order.getRemainingUnits(), customer == null ? "" : customerTypeLabel(customer));
         }
     }
 
-    /**
-     * A single location for all domain-status-to-player-label translations.
-     */
+    private static String customerTypeLabel(Customer customer) {
+        return "[" + customer.getCustomerTypeLabel().toUpperCase(Locale.ROOT) + "]";
+    }
+
+    private static String orderPriceLabel(Order order) {
+        int menuPriceCents = order.getItem().getPriceCents();
+        int chargedPriceCents = order.getFinalPriceCents();
+        if (menuPriceCents == chargedPriceCents) {
+            return money(chargedPriceCents);
+        }
+        return money(chargedPriceCents) + " (menu " + money(menuPriceCents) + ")";
+    }
+
     private static String customerStatusLabel(Customer customer) {
         return switch (customer.getStatus()) {
             case WAITING -> "Waiting outside";
@@ -256,11 +258,6 @@ public class RestaurantCLI {
         };
     }
 
-    /**
-     * A single location for all domain-status-to-player-label translations.
-     * The READY branch asks Order.canBeServedOn — the same rule the
-     * controller validates against — so the display can never drift from it.
-     */
     private static String orderStatusLabel(Order order, int currentTurn) {
         return switch (order.getStatus()) {
             case PLACED -> "Awaiting preparation";
@@ -275,14 +272,16 @@ public class RestaurantCLI {
 
     private void showWaiterSuccess(WaiterChoice choice) {
         if (choice instanceof SeatChoice seat) {
-            success("Customer C" + seat.getCustomerId() + " seated at Table " + seat.getTableId() + ".");
+            Customer customer = controller.getGameState().findCustomer(seat.getCustomerId());
+            success("Customer C" + seat.getCustomerId() + " seated at Table " + seat.getTableId()
+                    + ". " + customerTypeLabel(customer));
         } else if (choice instanceof TakeOrderChoice takeOrder) {
             Table table = controller.getGameState().findTable(takeOrder.getTableId());
             Customer customer = table.getOccupant();
             Order order = customer.getOrder();
             success("Order #" + order.getOrderId() + ": C" + customer.getCustomerId()
                     + " ordered " + order.getItem().getName() + " ("
-                    + money(order.getFinalPriceCents()) + ").");
+                    + orderPriceLabel(order) + "). " + customerTypeLabel(customer));
         } else if (choice instanceof ServeChoice serve) {
             success("Order #" + serve.getOrderId() + " delivered to the customer.");
         } else {
@@ -304,7 +303,6 @@ public class RestaurantCLI {
         }
     }
 
-    /** Announce actual changes, rather than implying a payment happens every turn. */
     private void showEndTurn(TurnSnapshot before) {
         GameState state = controller.getGameState();
         System.out.println(accent("\n  === TURN " + state.getCurrentTurn() + " COMPLETE - SHIFT SUMMARY ===", GREEN));
@@ -320,7 +318,8 @@ public class RestaurantCLI {
             if (customer.getStatus() == CustomerStatus.LEFT
                     && before.activeCustomerIds.contains(customer.getCustomerId())) {
                 System.out.println(accent("  [!] Customer C" + customer.getCustomerId()
-                        + " left unhappy! They ran out of patience.", RED));
+                        + " left unhappy! They ran out of patience. "
+                        + customerTypeLabel(customer), RED));
             }
         }
         System.out.printf("  Total cash %s | Paid %d | Avg satisfaction %s | Walkouts %d%n",
@@ -328,7 +327,6 @@ public class RestaurantCLI {
                 state.getUnhappyDepartures());
     }
 
-    /** Remember only the values needed to report events after endTurn mutates state. */
     private static final class TurnSnapshot {
         private final int revenueCents;
         private final int paidCount;

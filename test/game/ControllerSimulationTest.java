@@ -29,13 +29,13 @@ public class ControllerSimulationTest {
         assert state.getCustomers().size() == 6;
         assert state.getPaidCount() == 0;
         assert state.getRevenueCents() == 0;
-        assert state.getUnhappyDepartures() == 2;
+        assert state.getUnhappyDepartures() == 1;
         assert controller.checkResult() == GameResult.DEFEAT;
 
         assert state.getCustomers().get(0).getStatus()
                 == CustomerStatus.LEFT;
         assert state.getCustomers().get(1).getStatus()
-                == CustomerStatus.LEFT;
+                == CustomerStatus.WAITING;
 
         System.out.println("No-action defeat simulation passed!");
     }
@@ -138,7 +138,8 @@ public class ControllerSimulationTest {
         assert controller.isGameOver();
         assert state.getCustomers().size() == 6;
         assert state.getPaidCount() == 4;
-        assert state.getRevenueCents() == 5100;
+        assert state.getRevenueCents() == 4950;
+        assert state.getAveragePaidSatisfaction() == 71.0;
         assert state.getAveragePaidSatisfaction() >= 60;
         assert controller.checkResult() == GameResult.VICTORY;
 

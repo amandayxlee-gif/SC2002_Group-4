@@ -6,11 +6,6 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 
-/**
- * Black-box CLI checks using the real GameController and scripted keyboard input.
- * No external test libraries are needed.
- * Run with: java -ea -cp out cli.CLISmokeTest
- */
 public class CLISmokeTest {
     public static void main(String[] args) throws Exception {
         testDefeatAndWalkouts();
@@ -26,9 +21,10 @@ public class CLISmokeTest {
         contains(output, "RESTAURANT RUSH", "single game title");
         contains(output, "FINAL SERVICE REPORT: DEFEAT", "full 18-turn defeat");
         contains(output, "Average paid satisfaction: N/A", "zero paid guests");
-        contains(output, "Unhappy departures: 2", "departure total");
+        contains(output, "Unhappy departures: 1", "departure total");
         contains(output, "Customer C1 left unhappy!", "first walkout event");
-        contains(output, "Customer C2 left unhappy!", "second walkout event");
+        absent(output, "Customer C2 left unhappy!", "VIP remains patient through turn 18");
+        contains(output, "[CRITIC]", "Critic customer arrived");
         contains(output, "[0] WAIT", "Waiter wait choice is 0");
         absent(output, "[4] SKIP ACTION", "old Waiter shortcut removed");
         System.out.println("PASS 18-turn defeat, walkout events, no-payment average, Waiter 0");
@@ -37,11 +33,12 @@ public class CLISmokeTest {
     private static void testVictoryAndOrderDisplays() throws Exception {
         String output = runCLI(victoryInputs());
         contains(output, "FINAL SERVICE REPORT: VICTORY", "victory outcome");
-        contains(output, "Revenue: $51.00   Paid: 4", "victory revenue and guests");
-        contains(output, "Average paid satisfaction: 68.0", "victory satisfaction");
+        contains(output, "Revenue: $49.50   Paid: 4", "victory revenue and guests");
+        contains(output, "Average paid satisfaction: 71.0", "victory satisfaction");
         contains(output, "SATISFACTION", "victory meter terminology");
         contains(output, "ordered Salad ($9.00)", "order-taking price");
-        contains(output, "Burger  $15.00", "kitchen price");
+        contains(output, "ordered Burger ($13.50 (menu $15.00))", "VIP discount at order placement");
+        contains(output, "Burger  $13.50 (menu $15.00)", "VIP kitchen price");
         contains(output, "Pasta   $18.00", "kitchen price for two-unit dish");
         contains(output, "Awaiting preparation", "human-readable placed status");
         contains(output, "Waiting for food", "context-sensitive seated status");
@@ -69,7 +66,6 @@ public class CLISmokeTest {
     }
 
     private static void testEmptyQueueDoesNotConsumeWaiterAction() throws Exception {
-        // Seat C1 on turn 1; on turn 2, try seating despite an empty queue.
         String output = runCLI("1\n1\n1\n0\n1\n0\n0\nq\n");
         contains(output, "No customers are waiting to be seated", "empty-queue hint");
         contains(output, "No staff task was consumed", "empty-queue attempt is harmless");
@@ -90,7 +86,6 @@ public class CLISmokeTest {
         return inputs.toString();
     }
 
-    /** ControllerSimulationTest's known winning 18-turn sequence. */
     private static String victoryInputs() {
         StringBuilder inputs = new StringBuilder();
         for (int turn = 1; turn <= 18; turn++) {

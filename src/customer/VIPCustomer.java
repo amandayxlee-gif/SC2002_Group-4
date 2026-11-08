@@ -6,7 +6,6 @@ public class VIPCustomer extends Customer {
         super(customerId);
     }
 
-    /** VIP customer loses only 5 satisfaction points per turn. */
     @Override
     public void decreaseSatisfaction() {
         if (getStatus() == CustomerStatus.WAITING || getStatus() == CustomerStatus.SEATED) {
@@ -14,7 +13,6 @@ public class VIPCustomer extends Customer {
         }
     }
 
-    /** VIP customer receives a 10% discount on their bill. */
     @Override
     public int calculateBillCents() {
         int originalPrice = super.calculateBillCents();

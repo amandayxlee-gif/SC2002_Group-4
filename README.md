@@ -4,11 +4,11 @@ Restaurant Rush is a Java command-line, turn-based restaurant management game de
 
 ## Project Status
 
-Stage 1 - Basic Operation: Implemented and tested, including the single Restaurant Rush CLI.
+Stage 1 - Basic Operation: Implemented and tested.
 
-The Stage 1 implementation includes customer arrivals, seating, food ordering, preparation, serving, eating, payment, customer satisfaction, abandonment, and victory/defeat evaluation, matching the assignment requirements
+Stage 2 - Customer Variety: Implemented and tested, including VIP and Critic customers, customer-specific satisfaction and pricing rules, and an updated CLI.
 
-Stage 2 and Stage 3 are not included in this implementation.
+Stage 3 - Advanced Management: Not included in this implementation.
 
 ## Stage 1 Game Rules
 Following the assignment requirements:
@@ -31,6 +31,18 @@ Following the assignment requirements:
 - Payment cannot occur on the same turn eating finishes.
 - Payment frees the customer's table.
 
+## Stage 2 Customer Variety
+
+All six customer arrivals still occur at turns 1, 4, 7, 10, 13 and 16.
+
+| Customer | Arrival | Satisfaction loss per waiting/seated turn | Bill | Food preference |
+| --- | --- | --- | --- | --- |
+| Regular | C1, C3, C4, C6 | 8 | Full menu price | Deterministic menu rotation |
+| VIP | C2, turn 4 | 5 | 10% off | Deterministic menu rotation |
+| Critic | C5, turn 13 | 12 | Full menu price | Pasta when available |
+
+The customer determines its own patience, menu preference and bill using overridden methods. At order placement the final price is locked into the `Order`, so the automatic Cashier collects the discounted amount without checking customer types. Customer labels and the discounted menu price appear in the CLI.
+
 ## Menu
 
 | Item | Price | Preparation Units |
@@ -39,9 +51,9 @@ Following the assignment requirements:
 | Burger | $15.00 | 1 |
 | Pasta | $18.00 | 2 |
 
-Customers select their own food using a deterministic rule based on their customer ID.
+Regular and VIP customers select food using a deterministic rule based on customer ID.
 
-For the Stage 1 menu, the selection sequence is Salad, Burger, Pasta, then repeats.
+The selection sequence is Salad, Burger, Pasta, then repeats. Critic customers instead prefer Pasta.
 
 ## Victory Conditions
 
@@ -138,12 +150,19 @@ Run the interactive CLI smoke tests:
 java -ea -cp out cli.CLISmokeTest
 ```
 
+Run the Stage 2-specific integration and CLI presentation checks:
+
+```bash
+java -ea -cp out cli.Stage2IntegrationGateTest --strict
+java -ea -cp out cli.Stage2CLIPresentationTest
+```
+
 The same three `java -ea -cp out ...` commands work on macOS/Linux.
 
 ### Reproducible CLI evidence
 
-The `evidence/stage1/` folder includes scripted input for a victory, defeat,
-and invalid-input recovery scenario. From the repository root on macOS/Linux:
+The `evidence/stage1/` folder archives the original Stage 1 scripted victory, defeat,
+and invalid-input recovery scenarios. To reproduce their original numerical outcomes, check out the preserved Stage 1 Git tag. The files can also be replayed on the current branch, but Stage 2 VIP pricing and patience will change the results. On macOS/Linux:
 
 ```bash
 NO_COLOR=1 java -cp out cli.Main < evidence/stage1/victory_input.txt
@@ -188,6 +207,19 @@ The CLI smoke test additionally exercises the revised Waiter/Chef inputs, displa
 refresh, order pricing, player-friendly labels, walkout events, invalid inputs,
 and full 18-turn victory and defeat scenarios.
 
+The Stage 2 victory script ends with 4 paid customers, $49.50 revenue and 71.0 average paid satisfaction. Its no-action defeat script ends with 1 walkout, since VIP customers lose patience more slowly. The original Stage 1 regression test entry points are retained, with simulation expectations updated to reflect Stage 2 behavior.
+
+### Stage 2 functional evidence
+
+```bash
+NO_COLOR=1 java -cp out cli.Main < evidence/stage2/victory_input.txt
+NO_COLOR=1 java -cp out cli.Main < evidence/stage2/defeat_input.txt
+NO_COLOR=1 java -cp out cli.Main < evidence/stage2/invalid_input.txt
+NO_COLOR=1 java -cp out cli.Main < evidence/stage2/critic_input.txt
+```
+
+See [evidence/stage2/README.md](evidence/stage2/README.md) for verified expected results and screenshot guidance.
+
 ## Project Structure
 
 | Package | Responsibilities |
@@ -214,6 +246,6 @@ The automated tests are stored in the `test/` directory.
 
 The original assignment brief provides the authoritative project requirements.
 
-`cli.RestaurantCLI` is the sole playable interface for Stage 1, launched through `cli.Main`.
+`cli.RestaurantCLI` is the sole playable interface for Stages 1 and 2, launched through `cli.Main`.
 
-The source code and automated tests reflect the current Stage 1 implementation.
+The current source code and automated tests reflect Stage 2; Stage 1 should be preserved as a separate Git tag or branch.

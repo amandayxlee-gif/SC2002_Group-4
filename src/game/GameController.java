@@ -3,8 +3,12 @@ package game;
 import customer.Customer;
 import customer.CustomerChoiceGenerator;
 import customer.CustomerStatus;
+import customer.CriticCustomer;
 import customer.Order;
 import customer.OrderStatus;
+import customer.VIPCustomer;
+import java.util.List;
+import java.util.function.IntFunction;
 import menu.Menu;
 import menu.MenuItem;
 import staff.Cashier;
@@ -12,22 +16,12 @@ import staff.Chef;
 import staff.Table;
 import staff.Waiter;
 
-/**
- * Controls the Restaurant Rush game.
- *
- * Manager decisions are validated before execution.
- * Invalid choices return an error without changing game state.
- *
- * Error convention:
- * - Player-input errors (invalid or rejected manager choices) are returned as
- *   Strings: null means the choice was valid and executed, non-null explains
- *   the rejection. The CLI displays the message and the manager redecides.
- * - Lifecycle misuse (startTurn/endTurn sequencing, acting after game over)
- *   throws IllegalStateException, because no player choice can cause it.
- */
 public class GameController {
 
     private static final int[] ARRIVAL_TURNS = {1, 4, 7, 10, 13, 16};
+    private static final List<IntFunction<Customer>> ARRIVAL_FACTORIES = List.of(
+            Customer::new, VIPCustomer::new, Customer::new,
+            Customer::new, CriticCustomer::new, Customer::new);
 
     private final GameState gameState;
     private final TurnProcessor turnProcessor;
@@ -37,11 +31,9 @@ public class GameController {
     private final Menu menu;
     private final CustomerChoiceGenerator choiceGenerator;
 
-    // Track whether each staff member has acted this turn
     private boolean waiterActedThisTurn;
     private boolean chefActedThisTurn;
 
-    // Track whether a turn is currently active
     private boolean turnActive = false;
 
     public GameController(Menu menu) {
@@ -54,9 +46,6 @@ public class GameController {
         this.menu = menu;
     }
 
-    /**
-     * Starts a new turn and processes customer arrivals.
-     */
     public void startTurn() {
 
         if (turnActive) {
@@ -81,15 +70,6 @@ public class GameController {
         processArrivals();
     }
 
-    /**
-     * Validates and executes the Waiter's chosen action in one pass.
-     *
-     * Targets are resolved once: every check runs before the first mutation,
-     * so a rejected choice changes no state and consumes no staff task. The
-     * references resolved during validation are the same ones executed on.
-     *
-     * Returns null if successful, otherwise an error message.
-     */
     public String executeWaiterChoice(WaiterChoice choice) {
 
         if (!turnActive) {
@@ -126,7 +106,6 @@ public class GameController {
             gameState.removeWaitingCustomer(customer);
         }
 
-        // TAKE_ORDER
         else if (choice instanceof TakeOrderChoice takeOrderChoice) {
 
             Table table = gameState.findTable(takeOrderChoice.getTableId());
@@ -156,7 +135,6 @@ public class GameController {
             gameState.addOrder(order);
         }
 
-        // SERVE
         else if (choice instanceof ServeChoice serveChoice) {
 
             Order order = gameState.findOrder(serveChoice.getOrderId());
@@ -191,7 +169,6 @@ public class GameController {
             gameState.recordServedCustomer();
         }
 
-        // WAIT requires no validation or action.
         else if (!(choice instanceof WaitChoice)) {
             return "Unsupported waiter choice";
         }
@@ -201,11 +178,6 @@ public class GameController {
         return null;
     }
 
-    /**
-     * Validates and executes the Chef's chosen action in one pass.
-     *
-     * Returns null if successful, otherwise an error message.
-     */
     public String executeChefChoice(int orderId) {
 
         if (!turnActive) {
@@ -239,9 +211,6 @@ public class GameController {
         return null;
     }
 
-    /**
-     * Runs automatic end-of-turn processes.
-     */
     public void endTurn() {
 
         if (!turnActive) {
@@ -267,21 +236,14 @@ public class GameController {
         return gameState;
     }
 
-    /**
-     * Adds a new customer on scheduled arrival turns.
-     */
     private void processArrivals() {
 
         int currentTurn = gameState.getCurrentTurn();
 
-        for (int arrivalTurn : ARRIVAL_TURNS) {
-
-            if (arrivalTurn == currentTurn) {
-
+        for (int i = 0; i < ARRIVAL_TURNS.length; i++) {
+            if (ARRIVAL_TURNS[i] == currentTurn) {
                 int customerId = gameState.nextCustomerId();
-
-                Customer customer = new Customer(customerId);
-
+                Customer customer = ARRIVAL_FACTORIES.get(i).apply(customerId);
                 gameState.addCustomer(customer);
             }
         }
