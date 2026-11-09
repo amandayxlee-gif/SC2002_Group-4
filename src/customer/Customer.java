@@ -92,6 +92,24 @@ public class Customer {
         }
     }
 
+    /**
+     * Increases satisfaction during Happy Hour.
+     * Satisfaction cannot exceed the maximum of 100.
+     */
+    public void increaseSatisfaction(int amount) {
+
+        if (amount < 0) {
+            throw new IllegalArgumentException(
+                "Satisfaction recovery cannot be negative"
+            );
+        }
+
+        satisfaction = Math.min(
+            MAX_SATISFACTION,
+            satisfaction + amount
+        );
+    }
+
     /** Leaves unhappy: frees the table and cancels any unpaid order. */
     public void leave() {
         if (table != null) {

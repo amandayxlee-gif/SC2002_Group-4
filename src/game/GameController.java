@@ -1,9 +1,9 @@
 package game;
 
+import customer.CriticCustomer;
 import customer.Customer;
 import customer.CustomerChoiceGenerator;
 import customer.CustomerStatus;
-import customer.CriticCustomer;
 import customer.Order;
 import customer.OrderStatus;
 import customer.VIPCustomer;
@@ -35,6 +35,7 @@ public class GameController {
     private boolean chefActedThisTurn;
 
     private boolean turnActive = false;
+    private boolean managerActionStarted = false;
 
     public GameController(Menu menu) {
         this.gameState = new GameState();
@@ -64,11 +65,29 @@ public class GameController {
 
         waiterActedThisTurn = false;
         chefActedThisTurn = false;
+        managerActionStarted = false;
 
         turnActive = true;
 
         processArrivals();
     }
+
+    public boolean activateHappyHour() {
+
+    if (!turnActive || managerActionStarted) {
+        return false;
+    }
+
+    HappyHour happyHour = gameState.getHappyHour();
+
+    if (!happyHour.activate(gameState.getCurrentTurn())) {
+        return false;
+    }
+
+    turnProcessor.applyHappyHourRecovery();
+
+    return true;
+}
 
     public String executeWaiterChoice(WaiterChoice choice) {
 

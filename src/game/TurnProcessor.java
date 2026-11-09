@@ -14,6 +14,33 @@ public class TurnProcessor {
         this.cashier = cashier;
     }
 
+/**
+ * Restores 15 satisfaction to eligible customers
+ * during an active Happy Hour turn.
+ */
+public void applyHappyHourRecovery() {
+
+    HappyHour happyHour = gameState.getHappyHour();
+    int currentTurn = gameState.getCurrentTurn();
+
+    if (!happyHour.isActive(currentTurn)) {
+        return;
+    }
+
+    for (Customer customer : gameState.getCustomers()) {
+
+        CustomerStatus status = customer.getStatus();
+
+        if (status == CustomerStatus.WAITING
+                || status == CustomerStatus.SEATED) {
+
+            customer.increaseSatisfaction(
+                happyHour.getSatisfactionRecovery()
+            );
+        }
+    }
+    }
+    
     public void runEndOfTurn(int currentTurn) {
         processEating(currentTurn);
         processPayments(currentTurn);
