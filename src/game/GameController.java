@@ -1,9 +1,9 @@
 package game;
 
+import customer.CriticCustomer;
 import customer.Customer;
 import customer.CustomerChoiceGenerator;
 import customer.CustomerStatus;
-import customer.CriticCustomer;
 import customer.Order;
 import customer.OrderStatus;
 import customer.VIPCustomer;
@@ -35,6 +35,7 @@ public class GameController {
     private boolean chefActedThisTurn;
 
     private boolean turnActive = false;
+    private boolean managerActionStarted = false;
 
     public GameController(Menu menu) {
         this.gameState = new GameState();
@@ -64,11 +65,48 @@ public class GameController {
 
         waiterActedThisTurn = false;
         chefActedThisTurn = false;
+        managerActionStarted = false;
 
         turnActive = true;
 
         processArrivals();
+        /*Restore satisfaction during the second Happy Hour turn*/
+        if (gameState.getHappyHour().isActive(gameState.getCurrentTurn())) {
+    turnProcessor.applyHappyHourRecovery();}
     }
+
+    public boolean activateHappyHour() {
+
+    if (!turnActive || managerActionStarted) {
+        return false;
+    }
+
+    HappyHour happyHour = gameState.getHappyHour();
+
+    if (!happyHour.activate(gameState.getCurrentTurn())) {
+        return false;
+    }
+
+    turnProcessor.applyHappyHourRecovery();
+
+    return true;
+}
+
+public String getHappyHourActivationError() {
+    if (!turnActive) {
+        return "Cannot activate Happy Hour outside an active turn.";
+    }
+
+    if (managerActionStarted) {
+        return "Happy Hour must be activated before staff actions.";
+    }
+
+    if (gameState.getHappyHour().hasBeenUsed()) {
+        return "Happy Hour has already been used.";
+    }
+
+    return null;
+}
 
     public String executeWaiterChoice(WaiterChoice choice) {
 
@@ -129,11 +167,23 @@ public class GameController {
             }
 
             MenuItem item = choiceGenerator.chooseItem(menu, customer);
-            Order order = new Order(gameState.nextOrderId(), customer.getCustomerId(), item);
+            Order order = new Order(
+                gameState.nextOrderId(),
+                customer.getCustomerId(),
+                item
+            );
 
             waiter.takeOrder(customer, order);
+
+            int finalPrice = gameState.getHappyHour().applyDiscount(
+                order.getFinalPriceCents(),
+                gameState.getCurrentTurn()
+            );
+
+            order.setFinalPriceCents(finalPrice);
+
             gameState.addOrder(order);
-        }
+                    }
 
         else if (choice instanceof ServeChoice serveChoice) {
 
@@ -174,6 +224,7 @@ public class GameController {
         }
 
         waiterActedThisTurn = true;
+        managerActionStarted = true;
 
         return null;
     }
@@ -207,6 +258,7 @@ public class GameController {
         chef.prepare(order, gameState.getCurrentTurn());
 
         chefActedThisTurn = true;
+        managerActionStarted = true;
 
         return null;
     }

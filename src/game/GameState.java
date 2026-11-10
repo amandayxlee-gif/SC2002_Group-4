@@ -35,6 +35,7 @@ public class GameState {
     private final List<Customer> customers = new ArrayList<>();
     private final List<Order> orders = new ArrayList<>();
     private final List<Table> tables = new ArrayList<>();
+    private final HappyHour happyHour = new HappyHour();
 
     /** Creates the base setting: two tables (assignment doc section 2.1). */
     public GameState() {
@@ -155,6 +156,11 @@ public class GameState {
             }
         }
         return null;
+    }
+
+    /* Returns the Happy Hour instance for this game */ 
+    public HappyHour getHappyHour() {
+    return happyHour;
     }
 
     /** Adds a customer to the game. Newly arrived customers also wait. */
