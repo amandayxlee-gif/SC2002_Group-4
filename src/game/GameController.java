@@ -15,10 +15,11 @@ import staff.Cashier;
 import staff.Chef;
 import staff.Table;
 import staff.Waiter;
+import staff.Host;
 
 public class GameController {
 
-    private static final int[] ARRIVAL_TURNS = {1, 4, 7, 10, 13, 16};
+    private static final int[] ARRIVAL_TURNS = { 1, 4, 7, 10, 13, 16 };
     private static final List<IntFunction<Customer>> ARRIVAL_FACTORIES = List.of(
             Customer::new, VIPCustomer::new, Customer::new,
             Customer::new, CriticCustomer::new, Customer::new);
@@ -26,12 +27,14 @@ public class GameController {
     private final GameState gameState;
     private final TurnProcessor turnProcessor;
     private final Waiter waiter;
+    private final Host host;
     private final Chef chef;
     private final Cashier cashier;
     private final Menu menu;
     private final CustomerChoiceGenerator choiceGenerator;
 
     private boolean waiterActedThisTurn;
+    private boolean hostActedThisTurn;
     private boolean chefActedThisTurn;
 
     private boolean turnActive = false;
@@ -40,6 +43,7 @@ public class GameController {
     public GameController(Menu menu) {
         this.gameState = new GameState();
         this.waiter = new Waiter();
+        this.host = new Host();
         this.chef = new Chef();
         this.cashier = new Cashier();
         this.choiceGenerator = new CustomerChoiceGenerator();
@@ -51,62 +55,109 @@ public class GameController {
 
         if (turnActive) {
             throw new IllegalStateException(
-                "Cannot start a new turn before ending the current turn"
-            );
+                    "Cannot start a new turn before ending the current turn");
         }
 
         if (gameState.isGameOver()) {
             throw new IllegalStateException(
-                "Game is already over"
-            );
+                    "Game is already over");
         }
 
         gameState.advanceTurn();
 
         waiterActedThisTurn = false;
+        hostActedThisTurn = false;
         chefActedThisTurn = false;
         managerActionStarted = false;
 
         turnActive = true;
 
         processArrivals();
-        /*Restore satisfaction during the second Happy Hour turn*/
+        /* Restore satisfaction during the second Happy Hour turn */
         if (gameState.getHappyHour().isActive(gameState.getCurrentTurn())) {
-    turnProcessor.applyHappyHourRecovery();}
+            turnProcessor.applyHappyHourRecovery();
+        }
     }
 
     public boolean activateHappyHour() {
 
-    if (!turnActive || managerActionStarted) {
-        return false;
+        if (!turnActive || managerActionStarted) {
+            return false;
+        }
+
+        HappyHour happyHour = gameState.getHappyHour();
+
+        if (!happyHour.activate(gameState.getCurrentTurn())) {
+            return false;
+        }
+
+        turnProcessor.applyHappyHourRecovery();
+
+        return true;
     }
 
-    HappyHour happyHour = gameState.getHappyHour();
+    public String getHappyHourActivationError() {
+        if (!turnActive) {
+            return "Cannot activate Happy Hour outside an active turn.";
+        }
 
-    if (!happyHour.activate(gameState.getCurrentTurn())) {
-        return false;
+        if (managerActionStarted) {
+            return "Happy Hour must be activated before staff actions.";
+        }
+
+        if (gameState.getHappyHour().hasBeenUsed()) {
+            return "Happy Hour has already been used.";
+        }
+
+        return null;
     }
 
-    turnProcessor.applyHappyHourRecovery();
+    /**
+     * Stage 3: Host seats one waiting customer per turn.
+     * This does not consume the Waiter's action.
+     *
+     * Returns null on success, or an error message on failure.
+     */
+    public String executeHostChoice(SeatChoice choice) {
 
-    return true;
-}
+        if (!turnActive) {
+            return "No active turn";
+        }
 
-public String getHappyHourActivationError() {
-    if (!turnActive) {
-        return "Cannot activate Happy Hour outside an active turn.";
+        if (hostActedThisTurn) {
+            return "Host has already acted this turn";
+        }
+
+        if (choice == null) {
+            return "No host choice provided";
+        }
+
+        Customer customer = gameState.findWaitingCustomer(
+                choice.getCustomerId());
+
+        if (customer == null) {
+            return "Customer is not in the waiting queue";
+        }
+
+        Table table = gameState.findTable(
+                choice.getTableId());
+
+        if (table == null) {
+            return "Table does not exist";
+        }
+
+        if (!table.isAvailable()) {
+            return "Table is already occupied";
+        }
+
+        host.seat(customer, table);
+        gameState.removeWaitingCustomer(customer);
+
+        hostActedThisTurn = true;
+        managerActionStarted = true;
+
+        return null;
     }
-
-    if (managerActionStarted) {
-        return "Happy Hour must be activated before staff actions.";
-    }
-
-    if (gameState.getHappyHour().hasBeenUsed()) {
-        return "Happy Hour has already been used.";
-    }
-
-    return null;
-}
 
     public String executeWaiterChoice(WaiterChoice choice) {
 
@@ -168,22 +219,20 @@ public String getHappyHourActivationError() {
 
             MenuItem item = choiceGenerator.chooseItem(menu, customer);
             Order order = new Order(
-                gameState.nextOrderId(),
-                customer.getCustomerId(),
-                item
-            );
+                    gameState.nextOrderId(),
+                    customer.getCustomerId(),
+                    item);
 
             waiter.takeOrder(customer, order);
 
             int finalPrice = gameState.getHappyHour().applyDiscount(
-                order.getFinalPriceCents(),
-                gameState.getCurrentTurn()
-            );
+                    order.getFinalPriceCents(),
+                    gameState.getCurrentTurn());
 
             order.setFinalPriceCents(finalPrice);
 
             gameState.addOrder(order);
-                    }
+        }
 
         else if (choice instanceof ServeChoice serveChoice) {
 
@@ -267,8 +316,7 @@ public String getHappyHourActivationError() {
 
         if (!turnActive) {
             throw new IllegalStateException(
-                "No active turn to end"
-            );
+                    "No active turn to end");
         }
 
         turnProcessor.runEndOfTurn(gameState.getCurrentTurn());
