@@ -70,6 +70,9 @@ public class GameController {
         turnActive = true;
 
         processArrivals();
+        /*Restore satisfaction during the second Happy Hour turn*/
+        if (gameState.getHappyHour().isActive(gameState.getCurrentTurn())) {
+    turnProcessor.applyHappyHourRecovery();}
     }
 
     public boolean activateHappyHour() {
@@ -87,6 +90,22 @@ public class GameController {
     turnProcessor.applyHappyHourRecovery();
 
     return true;
+}
+
+public String getHappyHourActivationError() {
+    if (!turnActive) {
+        return "Cannot activate Happy Hour outside an active turn.";
+    }
+
+    if (managerActionStarted) {
+        return "Happy Hour must be activated before staff actions.";
+    }
+
+    if (gameState.getHappyHour().hasBeenUsed()) {
+        return "Happy Hour has already been used.";
+    }
+
+    return null;
 }
 
     public String executeWaiterChoice(WaiterChoice choice) {
@@ -148,11 +167,23 @@ public class GameController {
             }
 
             MenuItem item = choiceGenerator.chooseItem(menu, customer);
-            Order order = new Order(gameState.nextOrderId(), customer.getCustomerId(), item);
+            Order order = new Order(
+                gameState.nextOrderId(),
+                customer.getCustomerId(),
+                item
+            );
 
             waiter.takeOrder(customer, order);
+
+            int finalPrice = gameState.getHappyHour().applyDiscount(
+                order.getFinalPriceCents(),
+                gameState.getCurrentTurn()
+            );
+
+            order.setFinalPriceCents(finalPrice);
+
             gameState.addOrder(order);
-        }
+                    }
 
         else if (choice instanceof ServeChoice serveChoice) {
 
@@ -193,6 +224,7 @@ public class GameController {
         }
 
         waiterActedThisTurn = true;
+        managerActionStarted = true;
 
         return null;
     }
@@ -226,6 +258,7 @@ public class GameController {
         chef.prepare(order, gameState.getCurrentTurn());
 
         chefActedThisTurn = true;
+        managerActionStarted = true;
 
         return null;
     }
