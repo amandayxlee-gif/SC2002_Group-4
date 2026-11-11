@@ -42,107 +42,68 @@ public class ControllerSimulationTest {
 
     private static void testSuccessfulGame() {
         GameController controller = new GameController(new Menu());
-
         for (int turn = 1; turn <= 18; turn++) {
             controller.startTurn();
-
-            String waiterResult = null;
-            String chefResult = null;
-
-            switch (turn) {
-                case 1:
-                    waiterResult = controller.executeWaiterChoice(
-                            new SeatChoice(1, 1));
-                    break;
-                case 2:
-                    waiterResult = controller.executeWaiterChoice(
-                            new TakeOrderChoice(1));
-                    break;
-                case 3:
-                    chefResult = controller.executeChefChoice(1);
-                    break;
-                case 4:
-                    waiterResult = controller.executeWaiterChoice(
-                            new ServeChoice(1));
-                    break;
-                case 5:
-                    waiterResult = controller.executeWaiterChoice(
-                            new SeatChoice(2, 2));
-                    break;
-                case 6:
-                    waiterResult = controller.executeWaiterChoice(
-                            new TakeOrderChoice(2));
-                    break;
-                case 7:
-                    waiterResult = controller.executeWaiterChoice(
-                            new SeatChoice(3, 1));
-                    chefResult = controller.executeChefChoice(2);
-                    break;
-                case 8:
-                    waiterResult = controller.executeWaiterChoice(
-                            new ServeChoice(2));
-                    break;
-                case 9:
-                    waiterResult = controller.executeWaiterChoice(
-                            new TakeOrderChoice(1));
-                    break;
-                case 10:
-                    chefResult = controller.executeChefChoice(3);
-                    break;
-                case 11:
-                    waiterResult = controller.executeWaiterChoice(
-                            new SeatChoice(4, 2));
-                    chefResult = controller.executeChefChoice(3);
-                    break;
-                case 12:
-                    waiterResult = controller.executeWaiterChoice(
-                            new ServeChoice(3));
-                    break;
-                case 13:
-                    waiterResult = controller.executeWaiterChoice(
-                            new TakeOrderChoice(2));
-                    chefResult = controller.executeChefChoice(4);
-                    break;
-                case 14:
-                    waiterResult = controller.executeWaiterChoice(
-                            new ServeChoice(4));
-                    break;
-                default:
-                    break;
+            if (turn == 10) {
+                if (!controller.activateHappyHour()) {
+                    throw new AssertionError("Happy Hour activation failed");
+                }
             }
-
-            if (waiterResult != null) {
-                throw new AssertionError(
-                        "Turn " + turn + " waiter error: " + waiterResult);
+            int hostCustomer = switch (turn) {
+                case 1 -> 1;
+                case 4 -> 2;
+                case 7 -> 3;
+                case 10 -> 4;
+                case 13 -> 5;
+                case 16 -> 6;
+                default -> 0;
+            };
+            if (hostCustomer > 0) {
+                int table = hostCustomer % 2 == 1 ? 1 : 2;
+                String error = controller.executeHostChoice(new SeatChoice(hostCustomer, table));
+                if (error != null) {
+                    throw new AssertionError("Turn " + turn + " Host error: " + error);
+                }
             }
-
-            if (chefResult != null) {
-                throw new AssertionError(
-                        "Turn " + turn + " chef error: " + chefResult);
+            WaiterChoice waiterChoice = switch (turn) {
+                case 1, 7, 14 -> new TakeOrderChoice(1);
+                case 4, 10, 17 -> new TakeOrderChoice(2);
+                case 2 -> new ServeChoice(1);
+                case 5 -> new ServeChoice(2);
+                case 9 -> new ServeChoice(3);
+                case 13 -> new ServeChoice(4);
+                case 16 -> new ServeChoice(5);
+                default -> new WaitChoice();
+            };
+            String waiterError = controller.executeWaiterChoice(waiterChoice);
+            if (waiterError != null) {
+                throw new AssertionError("Turn " + turn + " Waiter error: " + waiterError);
             }
-
+            int chefOrderId = switch (turn) {
+                case 1 -> 1;
+                case 4 -> 2;
+                case 7, 8 -> 3;
+                case 10, 11, 12 -> 4;
+                case 14, 15 -> 5;
+                case 17, 18 -> 6;
+                default -> 0;
+            };
+            if (chefOrderId > 0) {
+                String chefError = controller.executeChefChoice(chefOrderId);
+                if (chefError != null) {
+                    throw new AssertionError("Turn " + turn + " Chef error: " + chefError);
+                }
+            }
             controller.endTurn();
-
-            GameState state = controller.getGameState();
-
-            System.out.printf(
-                    "Turn %2d | Paid: %d | Revenue: $%.2f | Avg satisfaction: %.2f%n",
-                    turn,
-                    state.getPaidCount(),
-                    state.getRevenueCents() / 100.0,
-                    state.getAveragePaidSatisfaction());
         }
-
         GameState state = controller.getGameState();
-
         assert controller.isGameOver();
         assert state.getCustomers().size() == 6;
-        assert state.getPaidCount() == 4;
-        assert state.getRevenueCents() == 4950;
-        assert state.getAveragePaidSatisfaction() == 71.0;
-        assert state.getAveragePaidSatisfaction() >= 60;
+        assert state.getPaidCount() == 5;
+        assert state.getRevenueCents() == 7794;
+        assert state.getAveragePaidSatisfaction() == 83.8;
+        assert state.getUnhappyDepartures() == 0;
         assert controller.checkResult() == GameResult.VICTORY;
-
-        System.out.println("Successful victory simulation passed!");
+        System.out.println("Successful Stage 3 victory simulation passed!");
     }
 }

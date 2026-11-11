@@ -8,7 +8,7 @@ Stage 1 - Basic Operation: Implemented and tested.
 
 Stage 2 - Customer Variety: Implemented and tested, including VIP and Critic customers, customer-specific satisfaction and pricing rules, and an updated CLI.
 
-Stage 3 - Advanced Management: Not included in this implementation.
+Stage 3 - Advanced Management: Implemented and tested in the Stage 3 snapshot (Host, ComboMeal and Happy Hour).
 
 ## Stage 1 Game Rules
 Following the assignment requirements:
@@ -276,6 +276,56 @@ The automated tests are stored in the `test/` directory.
 
 The original assignment brief provides the authoritative project requirements.
 
-`cli.RestaurantCLI` is the sole playable interface for Stages 1 and 2, launched through `cli.Main`.
+`cli.RestaurantCLI` is the playable interface for all three stages, launched through `cli.Main`.
 
-The current source code and automated tests reflect Stage 2; Stage 1 should be preserved as a separate Git tag or branch.
+The current source code and automated tests reflect Stage 3. The earlier stages should remain available through the runnable `stage-1` and `stage-2` Git tags.
+
+## Stage 3 — Host, ComboMeal and Happy Hour
+
+Stage 3 adds the Host, ComboMeal and Happy Hour features to the Stage 2 game. The Host can seat one customer per turn without using the Waiter's action. Happy Hour can be activated once, before staff actions, and lasts for the current turn and the next. During active turns, eligible unserved customers recover up to 15 satisfaction points (maximum 100), and new orders receive 20% off. The CLI shows the remaining Happy Hour duration.
+
+`ComboMeal` uses the existing Salad and Pasta menu items. Together they cost $27.00, so the combo costs $24.30 after the 10% discount and takes three Chef preparation units. C4 selects the combo in the fixed Stage 3 scenario; other customers keep their Stage 2 food choices. `Menu.getItems()` still returns the three original dishes, while `Menu.getAllItems()` also includes the combo.
+
+Order prices are fixed when the order is placed. A combo ordered during Happy Hour costs $19.44. A VIP Burger costs $10.80 during Happy Hour after both discounts. The Cashier collects the saved order price. The CLI displays the Host and Happy Hour controls, combo items, prices and preparation progress.
+
+### Stage 3 turn controls
+
+1. On turns before Happy Hour has been activated: enter `1` to activate it immediately or `0` to skip.
+2. At the Host station: enter `1` and supply a queued customer ID and free table ID, or `0` to wait.
+3. At the Waiter station: `1` seats, `2` takes an order, `3` serves a ready order, `0` waits.
+4. At the Chef station: enter an active order ID to prepare one unit or `0` to wait.
+
+The Host can seat a customer and the Waiter can take that customer's order in the same turn. The game remains 18 turns and retains the original victory requirements.
+
+### Stage 3 tests and evidence
+
+From the repository root:
+
+```bash
+javac -d out $(find src test -name '*.java')
+java -ea -cp out game.Stage3IntegrationTest
+java -ea -cp out cli.Stage3CLITest
+java -ea -cp out game.HostStage3Test
+java -ea -cp out cli.CLISmokeTest
+java -ea -cp out cli.Stage2IntegrationGateTest --strict
+java -ea -cp out game.Stage1RegressionTest
+java -ea -cp out game.Stage1EdgeCaseTest
+```
+
+Reproducible runs are documented in `evidence/stage3/README.md`.
+
+### Stage 2 → Stage 3 change summary
+
+| File | Change | Reason |
+| --- | --- | --- |
+| `src/menu/ComboMeal.java` | New `MenuItem` subclass containing Salad and Pasta | Calculates the combo price and preparation units from the two items |
+| `src/menu/Menu.java` | Registers a ComboMeal alongside the three base items | Exposes the combo without changing the Stage 2 base-menu rotation |
+| `src/customer/CustomerChoiceGenerator.java` | C4 chooses the ComboMeal; others preserve original choice rule | Reproducible new-menu customer selection |
+| `src/cli/RestaurantCLI.java` | Adds Host and Happy Hour choices, status displays and combo details | Lets the player use Stage 3 features through the CLI |
+| `test/game/ControllerSimulationTest.java` | Updates the full victory path to include the Host and a three-unit combo | Earlier turn/payment rules remain tested with Stage 3 actions |
+| `test/cli/CLISmokeTest.java` | Updates tests for the new Host and Happy Hour prompts | Keeps CLI input behaviour covered by tests |
+| `test/game/Stage3IntegrationTest.java` | New domain/controller tests | Checks composition, combo pricing/units, discounts, timing, Host independence and Happy Hour |
+| `test/cli/Stage3CLITest.java` | New end-to-end CLI tests | Replays winning, losing, VIP discount and invalid-input scenarios |
+| `evidence/stage3/` | Reproducible scripted cases and instructions | Supports the Stage 3 report/video functional evidence |
+
+The Host and Happy Hour backend code was already present when this work began. This update adds ComboMeal and connects the existing Stage 3 features to the CLI. Keep the `stage-1` and `stage-2` Git tags pointing to their runnable earlier versions.
