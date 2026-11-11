@@ -9,6 +9,7 @@ import java.util.Scanner;
 import customer.Customer;
 import customer.CustomerStatus;
 import customer.Order;
+import menu.ComboMeal;
 import game.GameController;
 import game.GameResult;
 import game.GameState;
@@ -70,6 +71,12 @@ public class RestaurantCLI {
                         GameState.VICTORY_MIN_AVERAGE_SATISFACTION, 12),
                 average(state), GameState.VICTORY_MIN_AVERAGE_SATISFACTION);
         System.out.println("  +-----------------------------------------------------------------+");
+        var happyHour = state.getHappyHour();
+        String happyHourStatus = happyHour.isActive(state.getCurrentTurn())
+                ? "ACTIVE (" + happyHour.getRemainingTurns(state.getCurrentTurn()) + " turn(s) remaining)"
+                : happyHour.hasBeenUsed() ? "FINISHED" : "AVAILABLE";
+        System.out.println(accent("  HAPPY HOUR: " + happyHourStatus, YELLOW));
+        System.out.println("  HOST: one independent seating decision per turn");
 
         System.out.println(accent("  >>> CUSTOMER PATIENCE <<<", YELLOW));
         if (state.getWaitingList().isEmpty()) {
@@ -98,6 +105,62 @@ public class RestaurantCLI {
         }
         showOrders();
         System.out.println(accent("+=====================================================================+", MAGENTA));
+    }
+
+    private void chooseHappyHour() {
+        GameState state = controller.getGameState();
+        if (state.getHappyHour().hasBeenUsed()) {
+            return;
+        }
+        while (true) {
+            System.out.println(accent("\n  [HAPPY HOUR] ACTIVATE BEFORE STAFF ACTIONS", YELLOW));
+            int choice = readInt("Happy Hour [1=activate once, 0=skip; Q=quit] > ");
+            if (choice == 0) {
+                return;
+            }
+            if (choice == 1) {
+                if (controller.activateHappyHour()) {
+                    success("Happy Hour activated for this turn and the next: 20% off new orders; +15 patience to eligible customers.");
+                    displayState();
+                    return;
+                }
+                displayError(controller.getHappyHourActivationError());
+            } else {
+                displayError("Choose 0 or 1 for Happy Hour.");
+            }
+        }
+    }
+
+    private void chooseHost() {
+        while (true) {
+            System.out.println(accent("\n  [HOST STATION] OPTIONAL SEATING TASK", CYAN));
+            System.out.println("    [1] SEAT GUEST        [0] WAIT");
+            int choice = readInt("HOST action [0-1; Q=quit] > ");
+            if (choice == 0) {
+                success("Host waits this turn.");
+                return;
+            }
+            if (choice != 1) {
+                displayError("Choose 0 or 1 for Host.");
+                continue;
+            }
+            if (controller.getGameState().getWaitingList().isEmpty()) {
+                displayError("No customers are waiting to be seated.");
+                continue;
+            }
+            SeatChoice seating = new SeatChoice(readInt("Waiting customer ID > "),
+                    readInt("Free table ID > "));
+            String error = controller.executeHostChoice(seating);
+            if (error != null) {
+                displayError(error);
+                continue;
+            }
+            Customer customer = controller.getGameState().findCustomer(seating.getCustomerId());
+            success("Host seated Customer C" + seating.getCustomerId() + " at Table "
+                    + seating.getTableId() + ". " + customerTypeLabel(customer));
+            displayState();
+            return;
+        }
     }
 
     public WaiterChoice getWaiterChoice() {
@@ -168,6 +231,8 @@ public class RestaurantCLI {
             while (!controller.isGameOver()) {
                 controller.startTurn();
                 displayState();
+                chooseHappyHour();
+                chooseHost();
 
                 while (true) {
                     WaiterChoice choice = getWaiterChoice();
@@ -212,25 +277,31 @@ public class RestaurantCLI {
         System.out.println(accent("+=====================================================================+", MAGENTA));
         System.out.println(accent("|                        RESTAURANT RUSH                              |", MAGENTA));
         System.out.println(accent("+=====================================================================+", MAGENTA));
-        System.out.println("  18 turns | 2 tables | Waiter + Chef | automatic Cashier");
+        System.out.println("  18 turns | 2 tables | Host + Waiter + Chef | automatic Cashier");
         System.out.println("  WIN: 4+ paid guests, $45.00+ revenue, 60+ average satisfaction");
         System.out.println("  GUESTS: REGULAR (-8 patience), VIP (-5, 10% off), CRITIC (-12)");
+        System.out.println("  COMBO: Salad + Pasta ($24.30, 3 prep units). C4 selects the combo.");
+        System.out.println("  Happy Hour: activate once at turn start, lasts 2 turns, 20% off new orders.");
         System.out.println("  Enter 0 to wait; Q quits at any input prompt.");
     }
 
     private void showOrders() {
         GameState state = controller.getGameState();
-        System.out.println(accent("  KITCHEN ORDERS (price is per dish)", CYAN));
+        System.out.println(accent("  KITCHEN ORDERS (locked prices)", CYAN));
         if (state.getOrders().isEmpty()) {
             System.out.println("    No orders have been placed yet.");
             return;
         }
         for (Order order : state.getOrders()) {
             Customer customer = state.findCustomer(order.getCustomerId());
-            System.out.printf("    #%d C%d  %-7s %-24s  %-25s  prep left %d  %s%n",
+            System.out.printf("    #%d C%d  %-21s %-24s  %-25s  prep left %d  %s%n",
                     order.getOrderId(), order.getCustomerId(), order.getItem().getName(),
                     orderPriceLabel(order), orderStatusLabel(order, state.getCurrentTurn()),
                     order.getRemainingUnits(), customer == null ? "" : customerTypeLabel(customer));
+            if (order.getItem() instanceof ComboMeal combo) {
+                System.out.println("       Combo components: " + combo.getFirstItem().getName()
+                        + " + " + combo.getSecondItem().getName() + " (" + combo.getPreparationUnits() + " preparation units)");
+            }
         }
     }
 
