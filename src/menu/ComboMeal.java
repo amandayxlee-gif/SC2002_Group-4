@@ -3,6 +3,7 @@ package menu;
 import java.util.Objects;
 
 public final class ComboMeal extends MenuItem {
+    private static final int COMBO_DISCOUNT_PERCENT = 10;
     private final MenuItem firstItem;
     private final MenuItem secondItem;
 
@@ -22,7 +23,7 @@ public final class ComboMeal extends MenuItem {
     private static int comboPrice(MenuItem first, MenuItem second) {
         long total = (long) Objects.requireNonNull(first).getPriceCents()
                 + Objects.requireNonNull(second).getPriceCents();
-        long discounted = (total * 90 + 50) / 100;
+        long discounted = (total * (100 - COMBO_DISCOUNT_PERCENT) + 50) / 100;
         return Math.toIntExact(discounted);
     }
 
