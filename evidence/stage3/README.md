@@ -20,5 +20,3 @@ The standard victory schedule uses the Host to seat customers independently of W
 The separate VIP scenario activates Happy Hour on turn 4. VIP C2's Burger is discounted first by 10%, then by a further 20%, reaching $10.80, recorded at order placement and charged at payment. The defeat script chooses no actions throughout all 18 turns. The invalid-input scenario tests rejected Happy Hour, Host, Waiter and Chef inputs and a successful Host retry.
 
 The Stage 3 combo-selection rule is deterministic: Customer C4 orders the Salad + Pasta Combo; every other customer retains the Stage 2 food selection rule, including Critic C5's Pasta preference. This deliberately preserves Stage 2 selections for all the other customers.
-
-The Stage 1 and 2 snapshots must remain available at their corresponding Git tags; the Stage 3 feature branch contains the new prompts and is not expected to replay Stage 2 input scripts verbatim. The base game still uses 18 turns, two tables and the existing victory thresholds.
