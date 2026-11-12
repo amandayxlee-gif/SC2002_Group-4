@@ -4,6 +4,7 @@ package customer;
 public class VIPCustomer extends Customer {
 
     public static final int VIP_SATISFACTION_LOSS_PER_TURN = 5;
+    public static final int VIP_DISCOUNT_PERCENT = 10;
 
     public VIPCustomer(int customerId) {
         super(customerId);
@@ -19,7 +20,7 @@ public class VIPCustomer extends Customer {
     @Override
     public int calculateBillCents() {
         int originalPrice = super.calculateBillCents();
-        return (int) Math.round(originalPrice * 0.90);
+        return (originalPrice * (100 - VIP_DISCOUNT_PERCENT) + 50) / 100;
     }
 
     @Override

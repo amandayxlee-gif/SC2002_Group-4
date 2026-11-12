@@ -16,6 +16,7 @@ import staff.Chef;
 import staff.Table;
 import staff.Waiter;
 import staff.Host;
+import staff.Seater;
 
 public class GameController {
 
@@ -132,15 +133,34 @@ public class GameController {
             return "No host choice provided";
         }
 
-        Customer customer = gameState.findWaitingCustomer(
-                choice.getCustomerId());
+        String error = seatFromChoice(choice, host);
+        if (error != null) {
+            return error;
+        }
+
+        hostActedThisTurn = true;
+        managerActionStarted = true;
+
+        return null;
+    }
+
+    /**
+     * Shared seating path for the Host and the Waiter: validates the choice,
+     * seats the customer through the acting staff role and removes them from
+     * the waiting queue. Assumes the caller has checked turn/role limits and
+     * that the choice is non-null.
+     *
+     * Returns null on success, or an error message on failure.
+     */
+    private String seatFromChoice(SeatChoice choice, Seater seater) {
+
+        Customer customer = gameState.findWaitingCustomer(choice.getCustomerId());
 
         if (customer == null) {
             return "Customer is not in the waiting queue";
         }
 
-        Table table = gameState.findTable(
-                choice.getTableId());
+        Table table = gameState.findTable(choice.getTableId());
 
         if (table == null) {
             return "Table does not exist";
@@ -150,11 +170,8 @@ public class GameController {
             return "Table is already occupied";
         }
 
-        host.seat(customer, table);
+        seater.seat(customer, table);
         gameState.removeWaitingCustomer(customer);
-
-        hostActedThisTurn = true;
-        managerActionStarted = true;
 
         return null;
     }
@@ -175,24 +192,10 @@ public class GameController {
 
         if (choice instanceof SeatChoice seatChoice) {
 
-            Customer customer = gameState.findWaitingCustomer(seatChoice.getCustomerId());
-
-            if (customer == null) {
-                return "Customer is not in the waiting queue";
+            String error = seatFromChoice(seatChoice, waiter);
+            if (error != null) {
+                return error;
             }
-
-            Table table = gameState.findTable(seatChoice.getTableId());
-
-            if (table == null) {
-                return "Table does not exist";
-            }
-
-            if (!table.isAvailable()) {
-                return "Table is already occupied";
-            }
-
-            waiter.seat(customer, table);
-            gameState.removeWaitingCustomer(customer);
         }
 
         else if (choice instanceof TakeOrderChoice takeOrderChoice) {

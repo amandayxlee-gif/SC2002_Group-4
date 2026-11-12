@@ -12,7 +12,7 @@ import customer.OrderStatus;
  * GameController validates every choice before calling, so these checks
  * should never fire in normal play.
  */
-public class Waiter {
+public class Waiter implements Seater {
 
     public void seat(Customer customer, Table table) {
         customer.seatAt(table);
